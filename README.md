@@ -12,6 +12,7 @@ browser, online or offline. Both support light/dark themes.
 |---|---|---|
 | **Part I — Understanding the book** | [`scale-study-dashboard.html`](scale-study-dashboard.html) | Learn the ideas: power laws & scale invariance, the sublinear/linear/superlinear taxonomy, the two-way-street duality, biology's 3/4 law, Galileo's 2/3, fractals, cities, companies, and reading exponents as orders of magnitude. Live power-law explorer, city predictor, and try-first self-tests. |
 | **Part II — Applying it to markets** | [`scale-markets-playbook.html`](scale-markets-playbook.html) | Translate the scaling laws into a portfolio manager's edge: square-root market impact, vol/option time-scaling, Hurst regime selection, fat tails vs Gaussian VaR, P&L concentration, fund capacity (the "Kleiber's law of funds"), mortality & resilience, and dimensionless thinking. Live calculators throughout plus a desk cheat-sheet. |
+| **Part III — FX regime classifier** | [`scale-fx-regime-classifier.html`](scale-fx-regime-classifier.html) | Bucket any FX pair into mean-reverting / choppy / trending using the book's `range ∝ T^H` law. Paste a price series (daily closes) and it computes a rescaled-range Hurst exponent and a Lo–MacKinlay variance ratio in-browser, classifies the regime with a conviction score, plots the price path and R/S scaling fit, and gives a per-bucket trade playbook. |
 
 Part II is a teaching aid with illustrative default constants — calibrate to
 your own book before trusting a number. Not investment advice.
