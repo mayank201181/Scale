@@ -1,0 +1,983 @@
+<title>Scale — A Study Dashboard</title>
+<meta name="description" content="A one-page visual study guide to Geoffrey West's book Scale: power laws, the sublinear/linear/superlinear taxonomy, and how structure sets the exponent.">
+<style>
+  :root {
+    color-scheme: light;
+    --paper:      #f4f5f2;
+    --surface:    #fbfbf9;
+    --surface-2:  #eef0ec;
+    --ink:        #14181b;
+    --ink-soft:   #43494e;
+    --ink-mute:   #7c8288;
+    --line:       #dfe2dc;
+    --line-soft:  #e9ebe6;
+    --accent:     #256d7b;
+    --accent-ink: #1c525d;
+    --sub:        #2e7d5b;   /* sublinear  a<1 */
+    --lin:        #c07d0a;   /* linear     a=1 */
+    --sup:        #cf4c54;   /* superlinear a>1 */
+    --sub-wash:   #e6f0ea;
+    --lin-wash:   #f6ecd8;
+    --sup-wash:   #f7e4e5;
+    --shadow:     0 1px 2px rgba(20,24,27,.05), 0 6px 24px rgba(20,24,27,.06);
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --paper:    #0e1113;
+      --surface:  #171b1e;
+      --surface-2:#1f2427;
+      --ink:      #eef1f0;
+      --ink-soft: #b7bdbf;
+      --ink-mute: #838a8d;
+      --line:     #2a3034;
+      --line-soft:#22282b;
+      --accent:   #4fb3c4;
+      --accent-ink:#7fcdd9;
+      --sub:      #4fb98a;
+      --lin:      #e0a63e;
+      --sup:      #e8757c;
+      --sub-wash: #16261f;
+      --lin-wash: #2a2113;
+      --sup-wash: #2a1719;
+      --shadow:   0 1px 2px rgba(0,0,0,.3), 0 8px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper:#0e1113; --surface:#171b1e; --surface-2:#1f2427;
+    --ink:#eef1f0; --ink-soft:#b7bdbf; --ink-mute:#838a8d;
+    --line:#2a3034; --line-soft:#22282b;
+    --accent:#4fb3c4; --accent-ink:#7fcdd9;
+    --sub:#4fb98a; --lin:#e0a63e; --sup:#e8757c;
+    --sub-wash:#16261f; --lin-wash:#2a2113; --sup-wash:#2a1719;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 30px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --paper:#f4f5f2; --surface:#fbfbf9; --surface-2:#eef0ec;
+    --ink:#14181b; --ink-soft:#43494e; --ink-mute:#7c8288;
+    --line:#dfe2dc; --line-soft:#e9ebe6;
+    --accent:#256d7b; --accent-ink:#1c525d;
+    --sub:#2e7d5b; --lin:#c07d0a; --sup:#cf4c54;
+    --sub-wash:#e6f0ea; --lin-wash:#f6ecd8; --sup-wash:#f7e4e5;
+    --shadow:0 1px 2px rgba(20,24,27,.05), 0 6px 24px rgba(20,24,27,.06);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--serif); line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size: 28px 28px, 28px 28px;
+    background-position: -1px -1px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 12px; font-weight: 600;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute);
+  }
+  h1,h2,h3 { font-family: var(--sans); font-weight: 700; text-wrap: balance; line-height: 1.12; }
+  .mono { font-family: var(--mono); }
+  code, .k {
+    font-family: var(--mono); font-size: .92em;
+    background: var(--surface-2); padding: .08em .38em; border-radius: 4px;
+    border: 1px solid var(--line);
+  }
+  a { color: var(--accent-ink); }
+
+  /* ---------- theme toggle ---------- */
+  .toggle {
+    position: fixed; top: 14px; right: 14px; z-index: 50;
+    font-family: var(--sans); font-size: 12px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--surface); color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 13px; cursor: pointer; box-shadow: var(--shadow);
+  }
+  .toggle:hover { color: var(--ink); border-color: var(--ink-mute); }
+
+  /* ---------- hero ---------- */
+  header.hero { padding: 92px 0 34px; }
+  .hero .kicker { display:flex; align-items:center; gap:12px; margin-bottom: 20px; }
+  .hero .kicker .rule { height:1px; flex:1; background: var(--line); }
+  .hero h1 { font-size: clamp(34px, 6vw, 62px); letter-spacing: -.02em; margin: 0 0 8px; }
+  .hero .book {
+    font-family: var(--serif); font-style: italic; font-weight: 400;
+    font-size: clamp(17px, 2.4vw, 22px); color: var(--ink-soft); margin: 0 0 26px;
+  }
+  .hero .lede { font-size: clamp(17px, 2.1vw, 20px); max-width: 40ch; color: var(--ink); }
+  .hero .lede strong { color: var(--accent-ink); }
+  .byline { font-family: var(--sans); font-size: 13px; color: var(--ink-mute); margin-top: 22px; }
+
+  /* ---------- generic section ---------- */
+  section { padding: 42px 0; }
+  .sec-head { margin-bottom: 22px; }
+  .sec-head h2 { font-size: clamp(23px, 3.4vw, 32px); letter-spacing: -.01em; margin: 6px 0 6px; }
+  .sec-head p { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: var(--shadow);
+  }
+  .pad { padding: 22px; }
+
+  /* ---------- power-law explorer ---------- */
+  .explorer { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0; overflow: hidden; }
+  .explorer .plots { border-right: 1px solid var(--line); padding: 20px; }
+  .plotgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .plotbox .plabel {
+    font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-mute); margin-bottom: 6px; text-align:center;
+  }
+  canvas { width: 100%; height: auto; display: block; }
+  .controls { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+  .expo-readout { display:flex; align-items: baseline; gap: 10px; }
+  .expo-readout .val { font-family: var(--mono); font-size: 40px; font-weight: 600; line-height: 1; }
+  .expo-readout .tag {
+    font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+  }
+  .tag.sub { background: var(--sub-wash); color: var(--sub); }
+  .tag.lin { background: var(--lin-wash); color: var(--lin); }
+  .tag.sup { background: var(--sup-wash); color: var(--sup); }
+  input[type=range] { width: 100%; accent-color: var(--accent); margin: 2px 0; }
+  .presetrow { display:flex; flex-wrap: wrap; gap: 6px; }
+  .preset {
+    font-family: var(--sans); font-size: 12px; font-weight: 600;
+    background: var(--surface-2); color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; cursor: pointer;
+  }
+  .preset:hover { color: var(--ink); border-color: var(--ink-mute); }
+  .expo-story {
+    font-family: var(--serif); font-size: 15.5px; line-height: 1.5;
+    background: var(--surface-2); border-radius: 10px; padding: 13px 15px; border: 1px solid var(--line);
+  }
+  .expo-story b { font-family: var(--mono); font-weight: 600; }
+
+  /* ---------- exponent zoo ---------- */
+  .zoo-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .zoo-col h3 {
+    font-size: 14px; letter-spacing: .02em; margin: 0 0 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot { width: 11px; height: 11px; border-radius: 3px; display:inline-block; }
+  .zoo-col .cap { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin: 0 0 12px; }
+  .zoo-item {
+    background: var(--surface); border: 1px solid var(--line); border-left-width: 3px;
+    border-radius: 8px; padding: 11px 13px; margin-bottom: 9px;
+  }
+  .zoo-item .row1 { display:flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .zoo-item .name { font-family: var(--sans); font-weight: 650; font-size: 14px; }
+  .zoo-item .exp { font-family: var(--mono); font-weight: 600; font-size: 15px; white-space: nowrap; }
+  .zoo-item .desc { font-size: 13.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
+  .zoo-col.sub .zoo-item { border-left-color: var(--sub); }
+  .zoo-col.lin .zoo-item { border-left-color: var(--lin); }
+  .zoo-col.sup .zoo-item { border-left-color: var(--sup); }
+  .zoo-col.sub .exp { color: var(--sub); }
+  .zoo-col.lin .exp { color: var(--lin); }
+  .zoo-col.sup .exp { color: var(--sup); }
+
+  /* ---------- duality ---------- */
+  .duality { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: stretch; }
+  .dir { padding: 22px; }
+  .dir .num { font-family: var(--mono); font-size: 12px; color: var(--ink-mute); letter-spacing: .1em; }
+  .dir h3 { font-size: 17px; margin: 6px 0 8px; }
+  .dir p { margin: 0 0 10px; font-size: 15px; color: var(--ink-soft); }
+  .dir .ex { font-size: 13.5px; color: var(--ink); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; border:1px solid var(--line); }
+  .spine {
+    width: 1px; background: var(--line); position: relative; margin: 12px 0;
+  }
+  .duality .verdict { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 16px 22px; font-size: 14.5px; color: var(--ink-soft); }
+  .duality .verdict b { color: var(--ink); font-family: var(--sans); }
+
+  /* ---------- concept blocks ---------- */
+  .concept { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .concept.solo { grid-template-columns: 1fr; }
+  .prose p { margin: 0 0 13px; }
+  .prose p:last-child { margin-bottom: 0; }
+  .prose .lead { font-size: 17px; }
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--surface);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 4px 0; box-shadow: var(--shadow);
+  }
+  .callout .q { font-style: italic; font-size: 15px; }
+  .callout .src { font-family: var(--sans); font-size: 11.5px; color: var(--ink-mute); margin-top: 6px; letter-spacing: .02em; }
+  .statrow { display:flex; gap: 14px; flex-wrap: wrap; margin: 2px 0; }
+  .stat { flex: 1 1 120px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 13px 15px; box-shadow: var(--shadow); }
+  .stat .big { font-family: var(--mono); font-size: 25px; font-weight: 600; letter-spacing: -.02em; }
+  .stat .lbl { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin-top: 2px; line-height:1.35; }
+  .miniwash { border-radius: 12px; padding: 18px; }
+  .miniwash h3 { font-size: 15px; margin: 0 0 8px; }
+  .miniwash.four { background: var(--sub-wash); }
+  .fourline { font-family: var(--mono); font-size: clamp(20px,3vw,27px); font-weight: 600; text-align:center; margin: 6px 0; letter-spacing: -.01em; }
+  .fourline .plus { color: var(--accent); }
+  .fignote { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); text-align:center; margin-top: 6px; }
+
+  /* washing machine viz */
+  .wmviz { display:flex; gap: 18px; align-items:center; justify-content:center; flex-wrap: wrap; }
+
+  /* ---------- city predictor ---------- */
+  .citycalc { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .citycalc .out { display:flex; flex-direction: column; gap: 10px; }
+  .cbar { background: var(--surface-2); border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .cbar .top { display:flex; justify-content: space-between; align-items:baseline; }
+  .cbar .name { font-family: var(--sans); font-size: 13px; font-weight: 650; }
+  .cbar .num { font-family: var(--mono); font-weight: 600; font-size: 18px; }
+  .cbar.up .num { color: var(--sup); }
+  .cbar.down .num { color: var(--sub); }
+  .cbar .sub { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin-top: 2px; }
+
+  /* ---------- self-test ---------- */
+  .quiz { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .qcard { background: var(--surface); border:1px solid var(--line); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
+  .qcard .qq { font-size: 15.5px; margin: 0 0 12px; }
+  .qcard .diff { font-family: var(--sans); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-mute); }
+  .reveal-btn {
+    font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px;
+  }
+  .reveal-btn:hover { background: var(--accent-ink); }
+  .answer { display:none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); font-size: 14.5px; color: var(--ink-soft); }
+  .answer.show { display:block; }
+  .answer b { color: var(--ink); }
+
+  /* ---------- glossary ---------- */
+  .gloss { columns: 2; column-gap: 26px; }
+  .gloss dt { font-family: var(--sans); font-weight: 650; font-size: 14px; margin-top: 12px; }
+  .gloss dd { margin: 2px 0 0; font-size: 14px; color: var(--ink-soft); break-inside: avoid; }
+  .gloss dl { margin: 0; }
+
+  footer { padding: 40px 0 60px; border-top: 1px solid var(--line); margin-top: 30px; }
+  footer p { font-family: var(--sans); font-size: 13px; color: var(--ink-mute); max-width: 70ch; }
+
+  @media (max-width: 820px) {
+    .explorer, .duality, .concept, .citycalc, .quiz { grid-template-columns: 1fr; }
+    .explorer .plots { border-right: none; border-bottom: 1px solid var(--line); }
+    .zoo-cols { grid-template-columns: 1fr; }
+    .duality .spine { display:none; }
+    .gloss { columns: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<button class="toggle" id="themeToggle" aria-label="Toggle light or dark theme">
+  <span id="themeIcon">◐</span><span id="themeLabel">Theme</span>
+</button>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">
+      <span class="eyebrow">A Study Dashboard</span><span class="rule"></span>
+      <span class="eyebrow">Power Laws · Growth · Complexity</span>
+    </div>
+    <h1>Everything is set by size.</h1>
+    <p class="book"><em>Scale: The Universal Laws of Growth, Innovation, Sustainability, and the Pace of Life</em> — Geoffrey West</p>
+    <p class="lede">And the relationship between size and almost everything else is a <strong>power law</strong> — a single clean number, the exponent, that both <strong>falls out of physical structure</strong> and <strong>turns around to predict the world</strong>.</p>
+    <p class="byline">Built from the Moontower notes on <em>Scale</em>. Read it top to bottom, or jump to the concept you're stuck on. Every number below is drawn from the extract.</p>
+  </div>
+</header>
+
+<!-- ============ THE ONE EQUATION + EXPLORER ============ -->
+<section id="explorer">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Start here — the one equation</span>
+      <h2>A power law is <span class="mono">y = k·xᵃ</span></h2>
+      <p>On ordinary axes it's a curve. Take the log of both sides and it becomes a <em>straight line whose slope is the exponent <span class="mono">a</span></em>. The whole book lives on that line. Drag the exponent and watch what <span class="mono">a</span> actually means.</p>
+    </div>
+
+    <div class="card explorer">
+      <div class="plots">
+        <div class="plotgrid">
+          <div class="plotbox">
+            <div class="plabel">Ordinary axes</div>
+            <canvas id="linPlot" width="360" height="300"></canvas>
+          </div>
+          <div class="plotbox">
+            <div class="plabel">Log–log axes → slope = a</div>
+            <canvas id="logPlot" width="360" height="300"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="controls">
+        <div>
+          <div class="expo-readout">
+            <span class="val mono" id="expoVal">0.75</span>
+            <span class="tag" id="expoTag">sublinear</span>
+          </div>
+          <div style="font-family:var(--sans);font-size:12px;color:var(--ink-mute);margin-top:4px">exponent&nbsp;·&nbsp;a</div>
+        </div>
+        <input type="range" id="expoSlide" min="0.20" max="1.60" step="0.01" value="0.75" aria-label="Exponent value">
+        <div class="presetrow" id="presets"></div>
+        <div class="expo-story" id="expoStory"></div>
+      </div>
+    </div>
+    <p style="font-family:var(--sans);font-size:12.5px;color:var(--ink-mute);margin-top:12px;max-width:70ch">
+      <strong style="color:var(--ink-soft)">The move that unlocks the book:</strong> read the exponent as
+      <span class="k">order-of-magnitude in Y = a × order-of-magnitude in X</span>. Multiply size by 100 (two orders) and output multiplies by <span class="mono" id="omInline">32</span> — that's what <span class="mono">a</span> buys you.
+    </p>
+  </div>
+</section>
+
+<!-- ============ SCALE INVARIANCE ============ -->
+<section>
+  <div class="wrap">
+    <div class="concept">
+      <div class="prose">
+        <span class="eyebrow">The defining property</span>
+        <h2 style="font-size:clamp(21px,3vw,28px);margin:6px 0 12px">Scale invariance</h2>
+        <p class="lead">Multiply the input by any factor, at any scale, and the output multiplies by a <em>fixed</em> factor — no matter where you started.</p>
+        <p>This is the property that makes a power law special, and it is <b>not</b> shared by exponentials.</p>
+        <div class="callout">
+          <div class="q">"If the mass is increased by any arbitrary factor at any scale (100, in the example), then the metabolic rate increases by the same factor (32…) no matter what the value of the initial mass is — whether it's that of a mouse, cat, cow, or whale."</div>
+          <div class="src">Scale, p. 92</div>
+        </div>
+      </div>
+      <div class="prose">
+        <div class="miniwash" style="background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)">
+          <h3>Power law ≠ exponential</h3>
+          <p style="font-size:14.5px;color:var(--ink-soft)">Compounding is exponential. At 10% money doubles every ~7 years. Multiply the <em>input</em> and the answer changes depending on where you began:</p>
+          <div class="statrow" style="margin-top:10px">
+            <div class="stat"><div class="big">7→14 yr</div><div class="lbl">2× becomes 4× &nbsp;·&nbsp; a factor of <b>2</b></div></div>
+            <div class="stat"><div class="big">14→28 yr</div><div class="lbl">4× becomes 16× &nbsp;·&nbsp; a factor of <b>4</b></div></div>
+          </div>
+          <p style="font-size:13.5px;color:var(--ink-mute);margin-top:12px">Same multiplication of the input, different answer. A power law never does that — the factor is locked, which is exactly why it can predict.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EXPONENT ZOO ============ -->
+<section id="zoo">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Reference — the exponent zoo</span>
+      <h2>One number tells you the sign of the whole system</h2>
+      <p>Below 1, output grows slower than size → <em>economies of scale</em>, a system that slows down and stops. Above 1, output grows faster than size → <em>acceleration</em>, open-ended growth toward a singularity. The pivot is exactly 1.</p>
+    </div>
+    <div class="zoo-cols">
+      <div class="zoo-col sub">
+        <h3><span class="dot" style="background:var(--sub)"></span> Sublinear · a &lt; 1</h3>
+        <p class="cap">Economies of scale · bounded growth · biology</p>
+        <div class="zoo-item"><div class="row1"><span class="name">Metabolic rate (Kleiber)</span><span class="exp">mass<sup>3/4</sup></span></div><div class="desc">4 orders of mass buy only 3 of metabolism. Double size → +75% energy, saving 25%.</div></div>
+        <div class="zoo-item"><div class="row1"><span class="name">Strength (Galileo)</span><span class="exp">weight<sup>2/3</sup></span></div><div class="desc">Surfaces grow slower than volume, so weight outruns strength as things get bigger.</div></div>
+        <div class="zoo-item"><div class="row1"><span class="name">City infrastructure</span><span class="exp">N<sup>0.85</sup></span></div><div class="desc">Roads, cables, gas stations: ~15% saved per capita with each doubling.</div></div>
+        <div class="zoo-item"><div class="row1"><span class="name">Option straddle vs time</span><span class="exp">t<sup>1/2</sup></span></div><div class="desc">4× the time → only 2× the price. The finance cousin of Kleiber's law.</div></div>
+      </div>
+      <div class="zoo-col lin">
+        <h3><span class="dot" style="background:var(--lin)"></span> Linear · a = 1</h3>
+        <p class="cap">The pivot · output tracks size · the exponential engine</p>
+        <div class="zoo-item"><div class="row1"><span class="name">Company sales vs employees</span><span class="exp">≈ N<sup>1.0</sup></span></div><div class="desc">Roughly linear metabolic rate. Linear scaling is what mathematically yields exponential growth — what every firm chases.</div></div>
+        <div class="zoo-item"><div class="row1"><span class="name">Price per pound</span><span class="exp">x<sup>1</sup></span></div><div class="desc">The one exponent our intuition handles, because we practice it a zillion times a day.</div></div>
+        <div class="zoo-item"><div class="row1"><span class="name">Zipf's law (word rank)</span><span class="exp">rank<sup>-1</sup></span></div><div class="desc">Word #1 appears ~2× as often as #2, 3× as often as #3. Same form fits city sizes.</div></div>
+      </div>
+      <div class="zoo-col sup">
+        <h3><span class="dot" style="background:var(--sup)"></span> Superlinear · a &gt; 1</h3>
+        <p class="cap">Increasing returns · acceleration · cities</p>
+        <div class="zoo-item"><div class="row1"><span class="name">City output</span><span class="exp">N<sup>1.15</sup></span></div><div class="desc">Wages, wealth, patents — and crime, disease, pollution. The good, bad and ugly, hand in glove.</div></div>
+        <div class="zoo-item"><div class="row1"><span class="name">Social interactions</span><span class="exp">≈ N²/2</span></div><div class="desc">Possible links in a group of N. The mechanism behind the 1.15: more people → disproportionately more connections.</div></div>
+        <div class="zoo-item"><div class="row1"><span class="name">Rayleigh — why the sky is blue</span><span class="exp">1/λ<sup>4</sup></span></div><div class="desc">Scattering from pure dimensional reasoning — a strong exponent, no mechanism required.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THE DUALITY ============ -->
+<section id="duality">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">The idea running through the whole book</span>
+      <h2>The two-way street</h2>
+      <p>The exponent is a hinge. Physical reality determines it going one way; it predicts reality going the other. The most compelling laws do both.</p>
+    </div>
+    <div class="card duality">
+      <div class="dir">
+        <div class="num">DIRECTION 1</div>
+        <h3 style="color:var(--sub)">Physical reality → the exponent</h3>
+        <p>Constraints — how fluid moves through a tube, how surface area lags volume, how a network must reach every cell — <em>force</em> the exponent into existence. The <span class="mono">3/4</span> in Kleiber's law isn't fitted; it's determined by a fractal network filling a 3D body.</p>
+        <div class="ex">When you have this, you get something close to a real <b>theory</b> — biology's networks.</div>
+      </div>
+      <div class="spine"></div>
+      <div class="dir">
+        <div class="num">DIRECTION 2</div>
+        <h3 style="color:var(--sup)">The exponent → predicting reality</h3>
+        <p>Once it exists, run it backwards. Ignore a city's history, mayor and culture; feed in its population and <span class="mono">1.15</span> predicts wages, patents, crime and road length — a strong forecast, independent of idiosyncrasy.</p>
+        <div class="ex">Sometimes you get <b>only</b> this: a predictive regularity floating free of its mechanism — markets, coastlines.</div>
+      </div>
+      <div class="verdict">
+        <b>Why it matters:</b> Rayleigh predicts the blue sky and Mandelbrot measures a coastline's crinkliness — both without a mechanism. <i>"We know the scaling properties, which can allow us to handicap a prediction, but we don't know the mechanics."</i> (p. 78). The thrill of the book is watching messy reality collapse into one number, then watching that number turn around and predict the world.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BIOLOGY 3/4 ============ -->
+<section id="biology">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Deep dive · sublinear biology</span>
+      <h2>Kleiber's law and the magic number 4</h2>
+      <p>Metabolic rate scales as <span class="mono">mass<sup>3/4</sup></span> — and quarter-powers show up across 50+ biological laws, holding across 27 orders of magnitude, in mammals, birds, fish, plants and cells alike.</p>
+    </div>
+
+    <div class="concept">
+      <div class="prose">
+        <p class="lead">The elephant vs the rat is the canonical picture: ~10,000× the mass (4 orders), but only ~1,000× the energy (3 orders). A ratio of 3 to 4 in the powers of ten.</p>
+        <div class="statrow">
+          <div class="stat"><div class="big" style="color:var(--sub)">+75%</div><div class="lbl">energy needed when you double an animal's size — not +100%. It <b>saves 25%</b> per doubling.</div></div>
+          <div class="stat"><div class="big" style="color:var(--sub)">~1/10</div><div class="lbl">the rate an elephant's cells run vs a rat's — why big animals live longer, mature slower, beat their hearts slower.</div></div>
+        </div>
+        <div class="callout">
+          <div class="q">"Small creatures live life in the fast lane while large ones move ponderously, though more efficiently, through life."</div>
+          <div class="src">Scale, p. 28</div>
+        </div>
+        <p>Double a mammal's mass and every <em>timescale</em> (lifespan, maturity) stretches ~25%, while every <em>rate</em> (heart rate) drops ~25%. The pace of life slows systematically with size.</p>
+      </div>
+
+      <div class="prose">
+        <div class="miniwash four">
+          <h3>Why 3/4 and not 2/3? Because 4 = 3 + 1</h3>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0 0 8px">A smooth 3D object's exchange surface scales at <span class="mono">2/3</span> of volume. But a network optimized to be <em>maximally space-filling</em> crinkles its surfaces until they behave like a higher dimension — gaining one effective dimension.</p>
+          <div class="fourline">4 <span class="plus">=</span> 3<span style="font-size:.7em;color:var(--ink-mute)"> space</span> <span class="plus">+</span> 1<span style="font-size:.7em;color:var(--ink-mute)"> fractal</span></div>
+          <div class="fignote">"Fractal geometry has literally given life an added dimension." — p. 154</div>
+        </div>
+
+        <div class="miniwash" style="background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);margin-top:16px">
+          <h3>The washing-machine intuition <span style="font-weight:400;color:var(--ink-mute);font-family:var(--serif);font-style:italic">(p. 152)</span></h3>
+          <div class="wmviz">
+            <canvas id="wmCanvas" width="150" height="150" aria-label="Crumpled sheets filling a volume"></canvas>
+            <div style="flex:1;min-width:150px">
+              <p style="font-size:13.5px;color:var(--ink-soft);margin:0">Sheets are basically 2D. Double the machine's size and you'd expect <span class="mono">2² = 4×</span> as many. But crumple them to fill the tub and you fit <span class="mono">2³ = 8×</span> — they scale like a volume. The crumpling turned a 2D thing into a 3D-scaling one. That's exactly what a biological network does to its exchange surface.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:20px">
+      <span class="eyebrow">The three postulates behind every quarter-power law <span style="text-transform:none;letter-spacing:0;font-weight:400">(p. 284)</span></span>
+      <div class="zoo-cols" style="margin-top:14px">
+        <div class="miniwash" style="background:var(--surface-2)">
+          <h3>1 · Space-filling</h3>
+          <p style="font-size:13.5px;color:var(--ink-soft);margin:0">The network must reach everywhere — "the tentacles of the network have to extend everywhere throughout the system it is serving" (p. 112). Every cell needs servicing.</p>
+        </div>
+        <div class="miniwash" style="background:var(--surface-2)">
+          <h3>2 · Invariant terminal units</h3>
+          <p style="font-size:13.5px;color:var(--ink-soft);margin:0">Capillaries, mitochondria and cells are ~the same size in a mouse and a blue whale. Evolution reuses them and rescales the network above — like the outlets in a Shanghai tower matching the ones in your house.</p>
+        </div>
+        <div class="miniwash" style="background:var(--surface-2)">
+          <h3>3 · Optimization</h3>
+          <p style="font-size:13.5px;color:var(--ink-soft);margin:0">Selection minimizes the energy the heart spends pumping, leaving the most for reproduction — the same least-action principle behind Newton, Maxwell and quantum mechanics. Nature minimizes.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="concept" style="margin-top:20px">
+      <div class="prose card pad">
+        <span class="eyebrow">Supporting hardware</span>
+        <h3 style="font-size:16px;margin:6px 0 10px">The engineering that makes the network work</h3>
+        <p style="font-size:14px;margin:0 0 9px"><b style="font-family:var(--sans)">Area-preserving branching (p. 120).</b> Daughter tubes' cross-sections sum to the parent's, so radii shrink by exactly <span class="mono">√2</span> per branch. This kills wave reflections (impedance matching — same idea as loudspeakers, power grids and the bones in your middle ear). Da Vinci knew the tree version.</p>
+        <p style="font-size:14px;margin:0 0 9px"><b style="font-family:var(--sans)">AC → DC in your arteries (p. 124).</b> Blood leaves the heart as a pulsatile wave; viscous drag damps it to steady flow by the capillaries. That's why you feel a pulse only in big arteries.</p>
+        <p style="font-size:14px;margin:0"><b style="font-family:var(--sans)">Why mammals bottom and top out.</b> Smallest — the Etruscan shrew (~2 g, heart 1,000+ bpm) — is set by where pulsatile waves can still propagate. Largest (~100 kg, blue-whale territory) by the Krogh radius: how far oxygen diffuses before cells starve. Godzilla fails both this and Galileo's strength limit.</p>
+      </div>
+      <div class="prose card pad">
+        <span class="eyebrow" style="color:var(--sup)">The payoff — why growth stops</span>
+        <h3 style="font-size:16px;margin:6px 0 10px">Death is a direct consequence of the 3/4 exponent</h3>
+        <p style="font-size:14.5px">Double the size and cells double, so maintenance energy needed doubles — <span class="mono">×2</span>. But supply only scales as <span class="mono">2<sup>3/4</sup> = 1.68</span>. The surplus available for growth shrinks to zero, and you stop growing even while you keep eating.</p>
+        <div class="callout" style="border-color:var(--sup)">
+          <div class="q">"The increase in the number of supply units (the capillaries) cannot keep up with the demands from the increase in the number of customers (the cells)."</div>
+          <div class="src">Scale, p. 166</div>
+        </div>
+        <p style="font-size:14px;color:var(--ink-soft);margin-bottom:0"><b style="color:var(--ink);font-family:var(--sans)">The master dynamic:</b> sublinear scaling → bounded, sigmoidal growth → a stable adult size → eventual death. Structure hands you the exponent; the exponent predicts the shape of a life.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GALILEO ============ -->
+<section id="galileo">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Deep dive · the geometry underneath</span>
+      <h2>Galileo's 2/3 — weight outruns strength</h2>
+      <p>The original "physics produces an exponent" story, 400 years early. Scale a shape up by a linear factor <span class="mono">L</span>: area (and strength) grows as <span class="mono">L²</span>, but volume (and weight) grows as <span class="mono">L³</span>. So strength scales as <span class="mono">weight<sup>2/3</sup></span>, and the big get relatively weaker.</p>
+    </div>
+    <div class="concept">
+      <div class="prose">
+        <div class="statrow">
+          <div class="stat"><div class="big">×1000</div><div class="lbl">weight when a tree or tower is made 10× taller (10³)…</div></div>
+          <div class="stat"><div class="big">×100</div><div class="lbl">…but only this much strength (10²). Safety margin drops to <b>1/10</b>. (p. 42)</div></div>
+        </div>
+        <div class="callout">
+          <div class="q">"A small dog could probably carry on his back two or three dogs of his own size; but I believe that a horse could not carry even one of his own size."</div>
+          <div class="src">Galileo, quoted in Scale, p. 42</div>
+        </div>
+        <p style="font-size:14px">Confirmed by prediction running forward: Lietzke plotted 1956 Olympic weightlifting totals against body weight and got a slope of <span class="mono">0.675</span> — against the predicted <span class="mono">2/3 = 0.667</span>. A clean hit.</p>
+      </div>
+      <div class="prose">
+        <div class="miniwash" style="background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)">
+          <h3>The same 3/2 logic, everywhere</h3>
+          <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 10px">One order of magnitude in area = 1.5 orders in volume/energy.</p>
+          <div class="zoo-item"><div class="row1"><span class="name">Richter scale</span><span class="exp" style="color:var(--lin)">×31.6 / step</span></div><div class="desc">Every +1.0 in amplitude = √1000 ≈ 31.6× the energy; +2.0 = 1,000×.</div></div>
+          <div class="zoo-item"><div class="row1"><span class="name">Drug dosing</span><span class="exp" style="color:var(--lin)">weight<sup>2/3</sup></span></div><div class="desc">An <em>area</em> problem, not volume. Dosing the elephant Tusko by body weight — the LSD case — killed him. Right dose: milligrams.</div></div>
+          <div class="zoo-item"><div class="row1"><span class="name">BMI is broken</span><span class="exp" style="color:var(--lin)">height²&nbsp;vs&nbsp;³</span></div><div class="desc">BMI assumes weight ∝ height²; Galileo says height³. So it over-diagnoses tall people. The Ponderal index (weight/height³) has the right basis.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FRACTALS ============ -->
+<section id="fractals">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Deep dive · prediction without a mechanism</span>
+      <h2>Fractals and the coastline problem</h2>
+      <p>Richardson's accident: a coastline's measured length <em>grows</em> as your ruler gets finer, instead of converging. Plot length vs resolution on log-log → a straight line → a power law whose slope measures crinkliness.</p>
+    </div>
+    <div class="concept">
+      <div class="prose">
+        <p><b style="font-family:var(--sans)">Mandelbrot's fractal dimension = power-law slope + 1.</b> Double the resolution and Britain's west coast grows ~25%; Norway's grows over 50% (p. 139). A line crinkly enough to fill an area has fractal dimension 2.</p>
+        <div class="statrow">
+          <div class="stat"><div class="big">1.02</div><div class="lbl">South African coast — nearly smooth</div></div>
+          <div class="stat"><div class="big">1.52</div><div class="lbl">Norwegian coast — very crinkly</div></div>
+        </div>
+        <p style="font-size:14px;color:var(--ink-soft)">Mandelbrot had the measuring tool but showed little interest in <em>why</em> a coastline has its dimension. He had the ruler, not the mechanism. "You wanna make money or you wanna be right?"</p>
+      </div>
+      <div class="prose">
+        <div class="miniwash" style="background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)">
+          <h3>Variability = resilience</h3>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0 0 10px">Healthy hearts have <em>high</em> fractal dimension — spiky, variable EKGs. Dangerously sick hearts go smooth, dimension near 1. The capacity to fluctuate is what makes a system robust — a theme West extends to companies, cities and ecosystems.</p>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0">Markets are fractal too: cotton-futures charts look statistically the same at an hour or five years — self-similar across timescales, the seed of econophysics. Predictive only in a coarse, average sense, never for a single stock.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CITIES ============ -->
+<section id="cities">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Deep dive · superlinear cities</span>
+      <h2>Cities flip biology's sign</h2>
+      <p>Physical infrastructure still scales sublinearly (<span class="mono">~0.85</span>) for the same space-filling reason as biology. But socioeconomic output scales <em>superlinearly</em> (<span class="mono">~1.15</span>), driven by social networks rather than physical pipes. Where biology is bounded and slows, cities are open-ended and accelerate.</p>
+    </div>
+
+    <div class="card pad">
+      <span class="eyebrow">Interactive — double a city, watch both signs move</span>
+      <h3 style="font-size:16px;margin:6px 0 14px">Per-capita, everything shifts by the same ~15% — the good, the bad and the ugly</h3>
+      <div class="citycalc">
+        <div>
+          <label style="font-family:var(--sans);font-size:13px;color:var(--ink-soft);font-weight:600">City A population</label>
+          <input type="range" id="cityA" min="50000" max="8000000" step="50000" value="200000">
+          <div class="mono" id="cityAval" style="font-size:15px;margin-bottom:14px">200,000</div>
+          <label style="font-family:var(--sans);font-size:13px;color:var(--ink-soft);font-weight:600">City B population</label>
+          <input type="range" id="cityB" min="50000" max="8000000" step="50000" value="400000">
+          <div class="mono" id="cityBval" style="font-size:15px">400,000</div>
+          <p style="font-family:var(--sans);font-size:12.5px;color:var(--ink-mute);margin-top:16px">B is <span class="mono" id="cityRatio">2.0×</span> the size of A. Per-capita figures use the 1.15 (output) and 0.85 (infrastructure) exponents.</p>
+        </div>
+        <div class="out">
+          <div class="cbar up"><div class="top"><span class="name">Wages, wealth, patents · per person</span><span class="num" id="outWages">+15%</span></div><div class="sub">socioeconomic output → N<sup>1.15</sup></div></div>
+          <div class="cbar up"><div class="top"><span class="name">Crime, disease, pollution · per person</span><span class="num" id="outCrime">+15%</span></div><div class="sub">the same social mechanism — good & bad together</div></div>
+          <div class="cbar down"><div class="top"><span class="name">Road length, cables, stations · per person</span><span class="num" id="outInfra">−12%</span></div><div class="sub">infrastructure → N<sup>0.85</sup>, an economy of scale</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="concept" style="margin-top:20px">
+      <div class="prose">
+        <div class="callout">
+          <div class="q">"Doubling the size of a city not only increases wages, wealth, and innovation by approximately 15 percent per capita but also increases the amount of crime, pollution, and disease to the same degree… the good, the bad, and the ugly come together hand in glove."</div>
+          <div class="src">Scale, p. 277</div>
+        </div>
+        <p style="font-size:14.5px">Know a US city's size and you predict <b>80–90%</b> of its wages, patents, road length, AIDS cases, violent crime and number of restaurants — independent of mayor, history or culture.</p>
+      </div>
+      <div class="prose">
+        <div class="miniwash" style="background:var(--sup-wash)">
+          <h3 style="color:var(--sup)">The mechanism, and the danger</h3>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0 0 10px">The number of possible interactions among N people is ~<span class="mono">N²/2</span>. More people → disproportionately more connections → more output of every kind. The physical city fills space sublinearly; the social city connects superlinearly.</p>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0">Superlinear scaling → faster-than-exponential (superexponential) growth → <b>finite-time singularities</b>. The engine of a city's open-ended growth is also what threatens to run it off a cliff.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPANIES ============ -->
+<section id="companies">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Deep dive · companies sit in the middle</span>
+      <h2>Companies behave like organisms, not cities</h2>
+      <p>Most company metrics scale sublinearly — dominated by economies of scale, not innovation. Effective metabolic rate (sales vs employees) comes out roughly linear; expenses start sublinear then turn linear. Linear scaling mathematically yields the exponential growth every firm chases — but the organism-like dynamics mean most mature, stagnate and die.</p>
+    </div>
+    <div class="concept">
+      <div class="prose">
+        <div class="callout">
+          <div class="q">"Half of all the companies in any given cohort of U.S. publicly traded companies disappear within ten years, and a scant few make it to fifty."</div>
+          <div class="src">Scale, p. 33</div>
+        </div>
+        <p style="font-size:14.5px">Cities almost never die; companies and organisms do. The difference is <b>diversity</b>. Cities keep adding new kinds of jobs and businesses as they grow; companies narrow their product space and pile on bureaucracy.</p>
+      </div>
+      <div class="prose">
+        <div class="miniwash" style="background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)">
+          <h3>Tightness of fit = evolutionary time</h3>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0 0 12px">The spread around the scaling line grows as the system has had less time to tune itself:</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="cbar"><div class="top"><span class="name">Organisms</span><span class="num" style="color:var(--sub);font-size:14px">tightest</span></div><div class="sub">billions of years of tuning</div></div>
+            <div class="cbar"><div class="top"><span class="name">Cities</span><span class="num" style="color:var(--lin);font-size:14px">looser</span></div><div class="sub">millennia</div></div>
+            <div class="cbar"><div class="top"><span class="name">Companies</span><span class="num" style="color:var(--sup);font-size:14px">loosest</span></div><div class="sub">decades</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GEMS ============ -->
+<section id="gems">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Uncategorized gems</span>
+      <h2>Four more patterns worth carrying around</h2>
+    </div>
+    <div class="zoo-cols">
+      <div class="card pad">
+        <h3 style="font-size:15px;margin:0 0 6px">Zipf's law <span class="mono" style="color:var(--lin)">rank⁻¹</span></h3>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:0">Word frequency ∝ 1/rank; the top word appears ~2× as often as the 2nd, 3× as the 3rd. The very same form fits city-size distributions. Nobody fully agrees why it's so universal. (p. 310)</p>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:15px;margin:0 0 6px">Mobility symmetry <span class="mono" style="color:var(--accent)">1/(d·f)²</span></h3>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:0">Visits obey an inverse-square law in distance × frequency. From 4 km once a month: 1,600 people; from 8 km: 400; from 20 km: 64. Hold distance × frequency constant and the count is constant. (p. 341)</p>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:15px;margin:0 0 6px">Temperature is <em>exponential</em></h3>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:0">Metabolic rate rises exponentially with temperature, because reaction rates do. Every 10°C doubles the rate of living; a 2°C rise → 20–30% change in growth and mortality across all life. The climate-change kicker. (p. 175)</p>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:15px;margin:0 0 6px">Dimensionless numbers</h3>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:0">Ratios independent of your units (Froude v²/L, π, Reynolds-type). Match the dimensionless number and a model ship predicts the real ship — the whole basis of scale-model engineering. (pp. 74–77)</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INTERPRETATION LESSON ============ -->
+<section id="lesson">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">The skill the book is really teaching</span>
+      <h2>Read every exponent as orders of magnitude</h2>
+      <p>Take logs of <span class="mono">y = xᵃ</span> and it becomes <span class="mono">log y = a · log x</span>. Since a log just asks "what order of magnitude is this?", the exponent is a conversion rate between them:</p>
+    </div>
+    <div class="card pad" style="text-align:center;background:var(--surface-2)">
+      <div class="mono" style="font-size:clamp(17px,3.2vw,26px);font-weight:600;letter-spacing:-.01em">
+        orders of magnitude in Y <span style="color:var(--accent)">=</span> a <span style="color:var(--accent)">×</span> orders of magnitude in X
+      </div>
+    </div>
+
+    <div class="concept" style="margin-top:20px">
+      <div class="prose">
+        <h3 style="font-size:16px;margin:0 0 10px">The options cousin of Kleiber's law</h3>
+        <p style="font-size:14.5px">Option prices scale with <span class="mono">time<sup>1/2</sup></span> at constant vol. So a 1-month straddle worth $4 gives a 4-month straddle worth not 4× but <span class="mono">4<sup>1/2</sup> = 2×</span> → $8. Sublinear scaling for a multiplicative factor.</p>
+        <p style="font-size:14.5px">Stretch time 100× (a 3-day vs a 1-year straddle): that's 2 orders in X, so only <span class="mono">½ × 2 = 1</span> order in Y. A name with a ~$20 one-year straddle has a ~$2 three-day straddle.</p>
+        <div class="callout">
+          <div class="q">If options scaled by time<sup>3/4</sup> instead of time<sup>1/2</sup>, prices would be wildly different — a whole extra order of magnitude. That's why a Hurst exponent of 0.5 is a completely different world from 0.6.</div>
+        </div>
+      </div>
+      <div class="prose">
+        <div class="miniwash" style="background:var(--lin-wash)">
+          <h3>Why exponents trip us up</h3>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0 0 10px">We handle linear relationships fluently — the grocery price is per pound, not per pound-squared — because we practice them constantly. Power, exponential and log intuition is just as important but far less rehearsed.</p>
+          <p style="font-size:14px;color:var(--ink-soft);margin:0"><b style="color:var(--ink)">The villa test:</b> a 500 m² villa at €1.5 M is €3,000/m². Guessing "≈€1,000/ft²" forgets that <em>area</em> converts by the linear factor <em>squared</em>: 1 m ≈ 3.28 ft, so 1 m² ≈ 10.8 ft², and the real figure is ~€280/ft². Trust the exponent, not the reflex.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SELF TEST ============ -->
+<section id="selftest">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Check yourself · try first, then reveal</span>
+      <h2>Six questions to see if it stuck</h2>
+      <p>Attempt each one in your head before opening the answer — the struggle is where the understanding forms.</p>
+    </div>
+    <div class="quiz" id="quiz"></div>
+  </div>
+</section>
+
+<!-- ============ GLOSSARY ============ -->
+<section id="glossary">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Reference</span>
+      <h2>Glossary</h2>
+    </div>
+    <div class="card pad">
+      <div class="gloss">
+        <dl>
+          <dt>Power law</dt><dd><span class="mono">y = k·xᵃ</span>. A straight line on log-log axes with slope <span class="mono">a</span>.</dd>
+          <dt>Scale invariance</dt><dd>Multiply input by any factor and output multiplies by a fixed factor, regardless of starting point. The signature of a power law.</dd>
+          <dt>Sublinear (a &lt; 1)</dt><dd>Output grows slower than size → economies of scale, bounded growth, eventual stop. Biology, infrastructure.</dd>
+          <dt>Superlinear (a &gt; 1)</dt><dd>Output grows faster than size → increasing returns, acceleration, finite-time singularities. City output.</dd>
+          <dt>Allometric scaling</dt><dd>How a trait changes with body size across species; in biology, dominated by quarter-powers.</dd>
+          <dt>Kleiber's law</dt><dd>Metabolic rate ∝ mass<sup>3/4</sup>.</dd>
+          <dt>Quarter-power scaling</dt><dd>The recurring 1/4 exponents across 50+ biological laws; "the magic number 4."</dd>
+          <dt>Space-filling network</dt><dd>A branching network that must reach every part of the volume it serves — postulate 1 behind the 3/4 law.</dd>
+          <dt>Fractal dimension</dt><dd>A non-integer measure of crinkliness; = power-law slope + 1. Norway ≈ 1.52, South Africa ≈ 1.02.</dd>
+          <dt>Krogh radius</dt><dd>The maximum distance oxygen can diffuse from a capillary — sets the largest mammal size.</dd>
+          <dt>Area-preserving branching</dt><dd>Daughter tube cross-sections sum to the parent's; radii shrink by √2, killing wave reflections.</dd>
+          <dt>Ponderal index</dt><dd>weight / height³ — the dimensionally correct alternative to BMI (weight / height²).</dd>
+          <dt>Dimensionless number</dt><dd>A ratio independent of units (Froude v²/L, Reynolds); lets a model predict the real thing.</dd>
+          <dt>Zipf's law</dt><dd>Frequency ∝ 1/rank; fits word frequencies and city sizes alike.</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><strong style="color:var(--ink-soft)">Source.</strong> Every figure and quotation on this page is drawn from the Moontower reading notes on <em>Scale: The Universal Laws of Growth, Innovation, Sustainability, and the Pace of Life in Organisms, Cities, Economies, and Companies</em> by Geoffrey West (Santa Fe Institute). Page references are as cited in those notes. This is a study aid, not a substitute for the book — the deep pleasure is in West's own prose.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- theme ---------- */
+  var root = document.documentElement, tIcon = document.getElementById('themeIcon'), tLabel = document.getElementById('themeLabel');
+  function isDark() {
+    var s = root.getAttribute('data-theme');
+    if (s) return s === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  function syncToggle(){ var d = isDark(); tIcon.textContent = d ? '☾' : '☀'; tLabel.textContent = d ? 'Dark' : 'Light'; }
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    root.setAttribute('data-theme', isDark() ? 'light' : 'dark');
+    syncToggle(); drawAll();
+  });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){ syncToggle(); drawAll(); });
+  function css(v){ return getComputedStyle(root).getPropertyValue(v).trim(); }
+
+  /* ---------- shared canvas helpers ---------- */
+  function prep(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || cv.width, h = w * (cv.getAttribute('data-ratio') ? +cv.getAttribute('data-ratio') : (cv.height/cv.width));
+    if (cv.id === 'linPlot' || cv.id === 'logPlot') h = w * (300/360);
+    if (cv.id === 'wmCanvas') h = w;
+    cv.width = w * dpr; cv.height = h * dpr;
+    cv.style.height = h + 'px';
+    var ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return { ctx: ctx, w: w, h: h };
+  }
+
+  /* ---------- power-law explorer ---------- */
+  var slide = document.getElementById('expoSlide'),
+      expoVal = document.getElementById('expoVal'),
+      expoTag = document.getElementById('expoTag'),
+      expoStory = document.getElementById('expoStory'),
+      omInline = document.getElementById('omInline'),
+      linCv = document.getElementById('linPlot'),
+      logCv = document.getElementById('logPlot');
+
+  var PRESETS = [
+    ['½  straddle/Hurst', 0.5],
+    ['⅔  strength', 0.667],
+    ['¾  Kleiber', 0.75],
+    ['0.85  infrastructure', 0.85],
+    ['1  linear', 1.0],
+    ['1.15  city output', 1.15]
+  ];
+  var pr = document.getElementById('presets');
+  PRESETS.forEach(function(p){
+    var b = document.createElement('button'); b.className='preset'; b.textContent=p[0];
+    b.addEventListener('click', function(){ slide.value = p[1]; update(); });
+    pr.appendChild(b);
+  });
+
+  function classify(a){
+    if (a > 1.001) return ['sup','superlinear', css('--sup')];
+    if (a < 0.999) return ['sub','sublinear', css('--sub')];
+    return ['lin','linear', css('--lin')];
+  }
+  function fmt(n){
+    if (n >= 100) return Math.round(n).toLocaleString();
+    if (n >= 10) return n.toFixed(1);
+    return n.toFixed(2);
+  }
+
+  function drawLin(a, colour){
+    var d = prep(linCv), ctx = d.ctx, W = d.w, H = d.h;
+    var padL = 34, padB = 26, padT = 12, padR = 10;
+    var x0 = padL, x1 = W - padR, y0 = H - padB, y1 = padT;
+    ctx.clearRect(0,0,W,H);
+    // grid
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1;
+    ctx.fillStyle = css('--ink-mute'); ctx.font = "10px " + css('--mono');
+    var i;
+    for (i=0;i<=5;i++){
+      var gx = x0 + (x1-x0)*i/5, gy = y0 - (y0-y1)*i/5;
+      ctx.globalAlpha=.5; ctx.beginPath(); ctx.moveTo(gx,y0); ctx.lineTo(gx,y1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0,gy); ctx.lineTo(x1,gy); ctx.stroke(); ctx.globalAlpha=1;
+    }
+    // axes
+    ctx.strokeStyle = css('--ink-mute'); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x0,y1); ctx.lineTo(x0,y0); ctx.lineTo(x1,y0); ctx.stroke();
+    ctx.fillText("x", x1-10, y0+16); ctx.fillText("y", x0-24, y1+8);
+    // curve y = x^a, x in [0,10], normalise by 10^a
+    var norm = Math.pow(10, a);
+    ctx.strokeStyle = colour; ctx.lineWidth = 2.4; ctx.beginPath();
+    for (i=0;i<=200;i++){
+      var xv = i/200*10, yv = Math.pow(xv, a)/norm;
+      var px = x0 + (x1-x0)*(xv/10), py = y0 - (y0-y1)*yv;
+      i? ctx.lineTo(px,py) : ctx.moveTo(px,py);
+    }
+    ctx.stroke();
+    // reference linear line (a=1) faint
+    ctx.strokeStyle = css('--ink-mute'); ctx.globalAlpha=.35; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+  }
+
+  function drawLog(a, colour){
+    var d = prep(logCv), ctx = d.ctx, W = d.w, H = d.h;
+    var padL = 34, padB = 26, padT = 12, padR = 10;
+    var x0 = padL, x1 = W - padR, y0 = H - padB, y1 = padT;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.globalAlpha=.5;
+    ctx.fillStyle = css('--ink-mute'); ctx.font = "10px " + css('--mono');
+    var i;
+    for (i=0;i<=4;i++){
+      var gx = x0 + (x1-x0)*i/4, gy = y0 - (y0-y1)*i/4;
+      ctx.beginPath(); ctx.moveTo(gx,y0); ctx.lineTo(gx,y1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0,gy); ctx.lineTo(x1,gy); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    ctx.strokeStyle = css('--ink-mute'); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x0,y1); ctx.lineTo(x0,y0); ctx.lineTo(x1,y0); ctx.stroke();
+    ctx.fillText("log x", x1-30, y0+16); ctx.fillText("log y", x0-2, y1+2);
+    // straight line slope a: log y = a log x, over log x in [0,4]
+    var maxLogY = 4;
+    ctx.strokeStyle = colour; ctx.lineWidth = 2.6; ctx.beginPath();
+    var lx0=0, lx1=4, ly0=a*lx0, ly1=a*lx1;
+    ctx.moveTo(x0 + (x1-x0)*(lx0/4), y0 - (y0-y1)*(ly0/maxLogY));
+    ctx.lineTo(x0 + (x1-x0)*(lx1/4), y0 - (y0-y1)*(ly1/maxLogY));
+    ctx.stroke();
+    // slope label
+    ctx.fillStyle = colour; ctx.font = "600 12px " + css('--mono');
+    var mx = x0 + (x1-x0)*0.62, my = y0 - (y0-y1)*(a*2.48/maxLogY);
+    ctx.fillText("slope = " + a.toFixed(2), mx-6, my-6);
+  }
+
+  function update(){
+    var a = +slide.value;
+    expoVal.textContent = a.toFixed(2);
+    var c = classify(a);
+    expoTag.textContent = c[1]; expoTag.className = 'tag ' + c[0];
+    var factor = Math.pow(100, a);
+    omInline.textContent = fmt(factor);
+    var line;
+    if (a < 0.999) {
+      var savePct = Math.round((1 - Math.pow(2,a)/2)*100);
+      line = "Multiply size <b>×100</b> and output rises only <b>×" + fmt(factor) + "</b> — sublinear. Double the size and you save about <b>" + savePct + "%</b> per doubling. This is the economy-of-scale regime of biology and infrastructure.";
+    } else if (a > 1.001) {
+      line = "Multiply size <b>×100</b> and output leaps <b>×" + fmt(factor) + "</b> — superlinear. Per-capita output <em>rises</em> with size (increasing returns), the regime that drives cities toward runaway, superexponential growth.";
+    } else {
+      line = "Multiply size <b>×100</b> and output rises exactly <b>×100</b> — linear. Per-unit output is flat; this is the pivot, and the exponent that mathematically produces exponential growth over time.";
+    }
+    expoStory.innerHTML = line;
+    drawLin(a, c[2]); drawLog(a, c[2]);
+  }
+  slide.addEventListener('input', update);
+
+  /* ---------- washing machine ---------- */
+  function drawWM(){
+    var cv = document.getElementById('wmCanvas'); if(!cv) return;
+    var d = prep(cv), ctx = d.ctx, W = d.w, H = d.h;
+    ctx.clearRect(0,0,W,H);
+    var cx = W/2, cy = H/2, R = Math.min(W,H)/2 - 8;
+    ctx.strokeStyle = css('--ink-mute'); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = css('--sub'); ctx.lineWidth = 1.4; ctx.globalAlpha=.9;
+    // pseudo-random but deterministic crumples
+    var seed = 7;
+    function rnd(){ seed = (seed*9301+49297)%233280; return seed/233280; }
+    for (var k=0;k<9;k++){
+      ctx.beginPath();
+      var a0 = rnd()*Math.PI*2, rr = R*(0.3+rnd()*0.55);
+      var px = cx + Math.cos(a0)*rr*0.4, py = cy + Math.sin(a0)*rr*0.4;
+      ctx.moveTo(px,py);
+      for (var s=0;s<5;s++){
+        var ang = a0 + s*0.9 + rnd()*0.8, rad = rr*(0.4+rnd()*0.6);
+        ctx.lineTo(cx+Math.cos(ang)*rad*0.55, cy+Math.sin(ang)*rad*0.55);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  /* ---------- city predictor ---------- */
+  var cA=document.getElementById('cityA'), cB=document.getElementById('cityB'),
+      cAv=document.getElementById('cityAval'), cBv=document.getElementById('cityBval'),
+      cRatio=document.getElementById('cityRatio'),
+      oW=document.getElementById('outWages'), oC=document.getElementById('outCrime'), oI=document.getElementById('outInfra');
+  function sgn(x){ return (x>=0?'+':'') + x + '%'; }
+  function updCity(){
+    var A=+cA.value, B=+cB.value;
+    cAv.textContent=A.toLocaleString(); cBv.textContent=B.toLocaleString();
+    var r=B/A; cRatio.textContent = r.toFixed(2)+'×';
+    var out = (Math.pow(r,1.15)/r - 1)*100;   // per-capita output change
+    var inf = (Math.pow(r,0.85)/r - 1)*100;   // per-capita infrastructure change
+    oW.textContent = sgn(Math.round(out)); oC.textContent = sgn(Math.round(out)); oI.textContent = sgn(Math.round(inf));
+  }
+  cA.addEventListener('input', function(){ if(+cB.value < +cA.value) cB.value = cA.value; updCity(); });
+  cB.addEventListener('input', function(){ if(+cB.value < +cA.value) cA.value = cB.value; updCity(); });
+
+  /* ---------- self test ---------- */
+  var QUESTIONS = [
+    { d:'Warm-up', q:'An elephant is ~10,000× the mass of a rat. Using Kleiber’s law, roughly how many times more energy does it burn — and why isn’t it 10,000×?',
+      a:'About <b>1,000×</b>. Metabolism scales as mass<sup>3/4</sup>, so 4 orders of magnitude in mass buy only 3 in metabolism (4 × ¾ = 3). Its cells run ~10× slower, which is why it lives longer and beats its heart more slowly.' },
+    { d:'Core', q:'A power law and an exponential both "grow fast." Which one is scale-invariant, and what test distinguishes them?',
+      a:'Only the <b>power law</b>. Multiply the input by a fixed factor: a power law’s output always multiplies by the <em>same</em> factor no matter where you start; an exponential’s does not (going 7→14 years doubles your money ×2, but 14→28 quadruples it ×4). Constant-factor response = power law.' },
+    { d:'Core', q:'Why does an organism stop growing even though it keeps eating?',
+      a:'Because maintenance scales linearly (double the cells → ×2 energy needed) but supply scales as mass<sup>3/4</sup> (only ×1.68). The surplus for growth shrinks to zero → bounded, sigmoidal growth → a stable adult size. Sublinearity is why life is finite.' },
+    { d:'Core', q:'Why is the biological exponent built on 4 rather than 3 — where does the extra dimension come from?',
+      a:'A network optimized to be maximally space-filling crinkles its exchange surfaces (fractally) until they act like a higher dimension. So <b>4 = 3 spatial + 1 fractal</b>. Same idea as crumpled sheets filling a washing machine as a volume (2³=8×) not an area (2²=4×).' },
+    { d:'Challenge', q:'A 1-month straddle is worth $4 at constant vol. Estimate a 9-month straddle, and state the exponent doing the work.',
+      a:'Options scale as time<sup>1/2</sup>. 9 months is 9× the time, so price ×√9 = <b>×3 → about $12</b> (not ×9 = $36). The ½ exponent is the same sublinear logic as Kleiber’s ¾ — just a different slope.' },
+    { d:'Challenge', q:'A city doubles in population. What happens per capita to (a) wages and (b) crime and (c) road length — and what single mechanism ties the first two together?',
+      a:'(a) wages <b>+~15%</b>, (b) crime <b>+~15%</b> — the good and the bad rise together, both driven by <b>social connectivity</b> (~N²/2 possible interactions, a superlinear 1.15 law). (c) road length per capita <b>falls ~15%</b> — infrastructure is a sublinear 0.85 economy-of-scale, driven by physical space-filling networks instead.' }
+  ];
+  var quiz = document.getElementById('quiz');
+  QUESTIONS.forEach(function(item, i){
+    var el = document.createElement('div'); el.className='qcard';
+    el.innerHTML = '<div class="diff">'+item.d+'</div>'
+      + '<p class="qq">'+item.q+'</p>'
+      + '<button class="reveal-btn" type="button">I’ve tried — show me</button>'
+      + '<div class="answer" id="ans'+i+'">'+item.a+'</div>';
+    var btn = el.querySelector('.reveal-btn'), ans = el.querySelector('.answer');
+    btn.addEventListener('click', function(){
+      var open = ans.classList.toggle('show');
+      btn.textContent = open ? 'Hide' : 'I’ve tried — show me';
+    });
+    quiz.appendChild(el);
+  });
+
+  /* ---------- boot ---------- */
+  function drawAll(){ update(); drawWM(); }
+  syncToggle(); updCity(); drawAll();
+  var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt=setTimeout(drawAll,120); });
+})();
+</script>
