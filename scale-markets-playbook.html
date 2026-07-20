@@ -1,0 +1,824 @@
+<title>Scale for Markets — A PM's Playbook</title>
+<meta name="description" content="A study dashboard translating the scaling laws from Geoffrey West's Scale into a portfolio manager's edge: market impact, vol time-scaling, Hurst, fat tails, P&L concentration, capacity, and dimensionless thinking.">
+<style>
+  :root {
+    color-scheme: light;
+    --paper:#f3f4f1; --surface:#fbfbf9; --surface-2:#ecefea;
+    --ink:#14171b; --ink-soft:#444a51; --ink-mute:#7b828a;
+    --line:#dfe2dc; --line-soft:#e9ebe6;
+    --accent:#3b4a9e; --accent-ink:#2c3878; --accent-wash:#e9ebf6;
+    --sub:#2f6f96;  --sub-wash:#e5eef2;     /* a<1 cool */
+    --lin:#667085;                          /* a=1 pivot */
+    --sup:#b7791b;  --sup-wash:#f6ecd8;     /* a>1 warm */
+    --gain:#1f9d57; --loss:#cf4c54;         /* P&L only  */
+    --shadow:0 1px 2px rgba(20,23,27,.05),0 6px 24px rgba(20,23,27,.06);
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+    color-scheme:dark;
+    --paper:#0d0f13; --surface:#161a20; --surface-2:#1e242c;
+    --ink:#eef1f4; --ink-soft:#b4bcc4; --ink-mute:#828a93;
+    --line:#2a313a; --line-soft:#20262e;
+    --accent:#7d8be6; --accent-ink:#9aa6ee; --accent-wash:#191c2e;
+    --sub:#58a7c4; --sub-wash:#132430;
+    --lin:#98a2b3;
+    --sup:#e0a63e; --sup-wash:#2a2113;
+    --gain:#3fb872; --loss:#e8757c;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 30px rgba(0,0,0,.35);
+  }}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --paper:#0d0f13;--surface:#161a20;--surface-2:#1e242c;--ink:#eef1f4;--ink-soft:#b4bcc4;--ink-mute:#828a93;
+    --line:#2a313a;--line-soft:#20262e;--accent:#7d8be6;--accent-ink:#9aa6ee;--accent-wash:#191c2e;
+    --sub:#58a7c4;--sub-wash:#132430;--lin:#98a2b3;--sup:#e0a63e;--sup-wash:#2a2113;--gain:#3fb872;--loss:#e8757c;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 30px rgba(0,0,0,.35);}
+  :root[data-theme="light"]{color-scheme:light;
+    --paper:#f3f4f1;--surface:#fbfbf9;--surface-2:#ecefea;--ink:#14171b;--ink-soft:#444a51;--ink-mute:#7b828a;
+    --line:#dfe2dc;--line-soft:#e9ebe6;--accent:#3b4a9e;--accent-ink:#2c3878;--accent-wash:#e9ebf6;
+    --sub:#2f6f96;--sub-wash:#e5eef2;--lin:#667085;--sup:#b7791b;--sup-wash:#f6ecd8;--gain:#1f9d57;--loss:#cf4c54;
+    --shadow:0 1px 2px rgba(20,23,27,.05),0 6px 24px rgba(20,23,27,.06);}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);line-height:1.62;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px;}
+  .eyebrow{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute);}
+  h1,h2,h3{font-family:var(--sans);font-weight:700;text-wrap:balance;line-height:1.13;}
+  .mono{font-family:var(--mono);}
+  code,.k{font-family:var(--mono);font-size:.92em;background:var(--surface-2);padding:.08em .38em;border-radius:4px;border:1px solid var(--line);}
+  a{color:var(--accent-ink);}
+  .num{font-variant-numeric:tabular-nums;}
+
+  .toggle{position:fixed;top:14px;right:14px;z-index:60;font-family:var(--sans);font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:7px;background:var(--surface);color:var(--ink-soft);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer;box-shadow:var(--shadow);}
+  .toggle:hover{color:var(--ink);border-color:var(--ink-mute);}
+
+  /* nav */
+  nav.pills{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  nav.pills .inner{max-width:1080px;margin:0 auto;padding:9px 22px;display:flex;gap:7px;overflow-x:auto;}
+  nav.pills a{font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--ink-soft);text-decoration:none;white-space:nowrap;padding:5px 11px;border-radius:999px;border:1px solid transparent;}
+  nav.pills a:hover{background:var(--surface-2);color:var(--ink);}
+
+  header.hero{padding:70px 0 26px;}
+  .hero .kicker{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+  .hero .kicker .rule{height:1px;flex:1;background:var(--line);}
+  .hero h1{font-size:clamp(32px,5.6vw,58px);letter-spacing:-.02em;margin:0 0 10px;}
+  .hero .lede{font-size:clamp(17px,2.1vw,20px);max-width:46ch;color:var(--ink);}
+  .hero .lede strong{color:var(--accent-ink);}
+  .hero .sub{font-family:var(--sans);font-size:13px;color:var(--ink-mute);margin-top:20px;max-width:66ch;}
+
+  section{padding:40px 0;scroll-margin-top:58px;}
+  .sec-head{margin-bottom:20px;}
+  .sec-head h2{font-size:clamp(22px,3.2vw,30px);letter-spacing:-.01em;margin:6px 0 6px;}
+  .sec-head p{margin:0;color:var(--ink-soft);max-width:64ch;}
+  .tie{font-family:var(--sans);font-size:12px;color:var(--ink-mute);margin-top:8px;}
+  .tie b{color:var(--accent-ink);font-weight:600;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);}
+  .pad{padding:22px;}
+
+  /* ledger */
+  .ledger{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .lcol h3{font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+  .lcol .cap{font-family:var(--sans);font-size:12px;color:var(--ink-mute);margin:0 0 12px;}
+  .litem{background:var(--surface);border:1px solid var(--line);border-left-width:3px;border-radius:8px;padding:11px 13px;margin-bottom:9px;}
+  .litem .r1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .litem .nm{font-family:var(--sans);font-weight:650;font-size:13.5px;}
+  .litem .ex{font-family:var(--mono);font-weight:600;font-size:13.5px;white-space:nowrap;}
+  .litem .ds{font-size:13px;color:var(--ink-soft);margin-top:3px;line-height:1.4;}
+  .lcol.tight .litem{border-left-color:var(--accent);} .lcol.tight .ex{color:var(--accent-ink);}
+  .lcol.lens  .litem{border-left-color:var(--sup);}    .lcol.lens  .ex{color:var(--sup);}
+
+  /* interactive shell */
+  .lab{display:grid;grid-template-columns:1.1fr 1fr;gap:0;overflow:hidden;}
+  .lab .viz{border-right:1px solid var(--line);padding:20px;}
+  .lab .panel{padding:22px;display:flex;flex-direction:column;gap:15px;}
+  canvas{width:100%;height:auto;display:block;}
+  label.ctl{font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:3px;}
+  input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0 2px;}
+  .val{font-family:var(--mono);font-size:15px;font-weight:600;}
+  .bigval{font-family:var(--mono);font-size:34px;font-weight:600;line-height:1;letter-spacing:-.02em;}
+  .story{font-family:var(--serif);font-size:15px;line-height:1.5;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:13px 15px;}
+  .story b{font-family:var(--mono);font-weight:600;}
+  .kpis{display:flex;gap:10px;flex-wrap:wrap;}
+  .kpi{flex:1 1 90px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+  .kpi .b{font-family:var(--mono);font-size:19px;font-weight:600;}
+  .kpi .l{font-family:var(--sans);font-size:11px;color:var(--ink-mute);margin-top:2px;line-height:1.3;}
+  .preset{font-family:var(--sans);font-size:12px;font-weight:600;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);border-radius:999px;padding:5px 10px;cursor:pointer;}
+  .preset:hover{color:var(--ink);border-color:var(--ink-mute);}
+  .presetrow{display:flex;flex-wrap:wrap;gap:6px;}
+
+  .callout{border-left:3px solid var(--accent);background:var(--surface);padding:12px 16px;border-radius:0 8px 8px 0;margin:4px 0;box-shadow:var(--shadow);}
+  .callout .q{font-style:italic;font-size:14.5px;}
+  .callout .src{font-family:var(--sans);font-size:11.5px;color:var(--ink-mute);margin-top:6px;}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+  .prose p{margin:0 0 12px;} .prose p:last-child{margin-bottom:0;}
+  .action{background:var(--accent-wash);border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .action .h{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:4px;}
+  .action p{font-size:14px;color:var(--ink-soft);margin:0;}
+
+  /* cheat sheet table */
+  .sheet{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .sheet th,.sheet td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .sheet th{font-family:var(--sans);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-mute);}
+  .sheet td.law{font-family:var(--sans);font-weight:650;white-space:nowrap;}
+  .sheet td .e{font-family:var(--mono);color:var(--accent-ink);}
+  .sheet td.act{color:var(--ink-soft);}
+  .sheetwrap{overflow-x:auto;}
+
+  /* quiz */
+  .quiz{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .qcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow);}
+  .qcard .diff{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-mute);}
+  .qcard .qq{font-size:15px;margin:6px 0 12px;}
+  .reveal-btn{font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;}
+  .reveal-btn:hover{background:var(--accent-ink);}
+  .answer{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:14px;color:var(--ink-soft);}
+  .answer.show{display:block;} .answer b{color:var(--ink);}
+
+  .disc{font-family:var(--sans);font-size:12.5px;color:var(--ink-mute);border:1px dashed var(--line);border-radius:10px;padding:13px 15px;}
+  footer{padding:36px 0 60px;border-top:1px solid var(--line);margin-top:26px;}
+  footer p{font-family:var(--sans);font-size:13px;color:var(--ink-mute);max-width:74ch;}
+
+  @media (max-width:820px){
+    .ledger,.lab,.two,.quiz{grid-template-columns:1fr;}
+    .lab .viz{border-right:none;border-bottom:1px solid var(--line);}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+
+<button class="toggle" id="themeToggle" aria-label="Toggle light or dark theme"><span id="themeIcon">◐</span><span id="themeLabel">Theme</span></button>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker"><span class="eyebrow">Companion Study Guide · Part II</span><span class="rule"></span><span class="eyebrow">From <em style="font-style:italic">Scale</em> → the trading desk</span></div>
+    <h1>Markets don't add. They scale.</h1>
+    <p class="lede">Almost every edge, cost, and risk you touch as a PM is a <strong>power law</strong> in disguise. Reading the exponent — not the narrative — is what protects capital and sharpens decisions. Here's West's book, rebuilt as a desk toolkit.</p>
+    <p class="sub">Two ledgers below: <strong>tight laws</strong> you can put a number on (impact, vol-time, Hurst, tails), and <strong>structural lenses</strong> that reframe how you think (capacity, mortality, resilience). Every panel is live — move the inputs.</p>
+  </div>
+</header>
+
+<nav class="pills"><div class="inner">
+  <a href="#ledgers">The two ledgers</a>
+  <a href="#impact">Impact ½</a>
+  <a href="#voltime">Vol &amp; time</a>
+  <a href="#hurst">Hurst</a>
+  <a href="#tails">Fat tails</a>
+  <a href="#pareto">P&amp;L concentration</a>
+  <a href="#capacity">Capacity</a>
+  <a href="#resilience">Mortality &amp; resilience</a>
+  <a href="#productivity">Productivity</a>
+  <a href="#cheatsheet">Cheat-sheet</a>
+</div></nav>
+
+<!-- ===== LEDGERS ===== -->
+<section id="ledgers">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">The framing — the book's duality, for a book</span>
+      <h2>Two kinds of scaling knowledge</h2>
+      <p>West's core tension: some exponents are a <em>real theory</em> (structure forces them, and they predict) — others are a <em>regularity floating free of its mechanism</em> ("we know the scaling properties which let us handicap a prediction, but we don't know the mechanics," p. 78). Both are usable at the desk; you just use them differently.</p>
+    </div>
+    <div class="ledger">
+      <div class="lcol tight">
+        <h3><span style="width:11px;height:11px;border-radius:3px;background:var(--accent);display:inline-block"></span> Tight laws — put a number on it</h3>
+        <p class="cap">Quantitative · goes straight into sizing, pricing, execution</p>
+        <div class="litem"><div class="r1"><span class="nm">Market-impact law</span><span class="ex">cost ∝ √(Q/ADV)</span></div><div class="ds">Slippage grows with the square root of order size. The single most direct P&L line you can model.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Vol &amp; option time-scaling</span><span class="ex">σ,straddle ∝ √T</span></div><div class="ds">Variance is linear in time, so vol and at-the-money premium scale as √T. Annualization, term structure, stop sizing.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Hurst / persistence</span><span class="ex">range ∝ Tᴴ</span></div><div class="ds">H below ½ = mean-reverting, above ½ = trending. Picks the strategy family. 0.5 vs 0.6 is a different world.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Fat-tailed returns</span><span class="ex">P(|r|&gt;x) ∝ x⁻ᵅ</span></div><div class="ds">Returns are power-law, not Gaussian. Governs VaR error, tail hedging, risk of ruin, Kelly caution.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Pareto / Zipf of P&amp;L</span><span class="ex">contribution ∝ rank⁻¹</span></div><div class="ds">A few trades make the year. Governs conviction sizing and why you must not truncate your own winners.</div></div>
+      </div>
+      <div class="lcol lens">
+        <h3><span style="width:11px;height:11px;border-radius:3px;background:var(--sup);display:inline-block"></span> Structural lenses — reframe the decision</h3>
+        <p class="cap">Qualitative · mental models that change what you look at</p>
+        <div class="litem"><div class="r1"><span class="nm">Capacity: why growth stops</span><span class="ex">Kleiber for AUM</span></div><div class="ds">Edge (supply) can't keep up with impact (maintenance) as size grows → net alpha peaks then rolls over. Know your capacity.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Pace of life vs size</span><span class="ex">big = slow</span></div><div class="ds">Large books move ponderously but efficiently; small books have a fast metabolism and can eat illiquid alpha. Nimbleness is an exponent.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Mortality &amp; base rates</span><span class="ex">half gone in 10y</span></div><div class="ds">Companies and strategies mature and die. Survivorship discipline on single-name longs and on your own alpha's half-life.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Variability = resilience</span><span class="ex">high fractal dim</span></div><div class="ds">A healthy heart is spiky; a suspiciously smooth equity curve is a sick one. Diversity and the room to fluctuate is robustness.</div></div>
+        <div class="litem"><div class="r1"><span class="nm">Superlinear crowding</span><span class="ex">links ∝ N²/2</span></div><div class="ds">Connectivity scales faster than size — great for liquidity, brutal in a deleveraging when everyone is the same trade.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== IMPACT ===== -->
+<section id="impact">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Tight law · the most profitable one to internalize</span>
+      <h2>The square-root law of market impact</h2>
+      <p>Push size into the market and the price moves against you by roughly <span class="mono">impact ≈ σ·√(Q/ADV)</span> — sublinear in your order (a ½ exponent, Kleiber's cousin). But your <em>total</em> execution cost is order × impact, so it scales as <span class="mono">Q^1.5</span> — Galileo's 3/2, superlinear. The trap: cost per share keeps rising even though impact "feels" cheap.</p>
+      <p class="tie"><b>Scale link:</b> this is the book's clearest "prediction without mechanism" — a robust empirical √-law nobody fully derives (p. 78). Handicap with it anyway.</p>
+    </div>
+    <div class="card lab">
+      <div class="viz">
+        <canvas id="impactPlot" width="380" height="300" aria-label="Execution cost vs order size"></canvas>
+      </div>
+      <div class="panel">
+        <div>
+          <label class="ctl">Order size — % of average daily volume</label>
+          <input type="range" id="impSize" min="1" max="50" step="1" value="10">
+          <div class="val"><span id="impSizeV">10</span>% of ADV</div>
+        </div>
+        <div>
+          <label class="ctl">Daily volatility (σ)</label>
+          <input type="range" id="impVol" min="1" max="6" step="0.5" value="2">
+          <div class="val"><span id="impVolV">2.0</span>% / day</div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="b" id="impBps">—</div><div class="l">impact (arrival slippage)</div></div>
+          <div class="kpi"><div class="b" id="impTot">—</div><div class="l">total cost as % of notional</div></div>
+        </div>
+        <div class="story" id="impStory"></div>
+        <div class="action"><div class="h">Desk action</div><p>Halving participation (slice the order, trade over 2 days) cuts impact by <span class="mono">1−1/√2 ≈ 29%</span>. Because cost is <span class="mono">Q^1.5</span>, the last third of a big order is where the bleed lives — that's your capacity limit talking.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== VOL & TIME ===== -->
+<section id="voltime">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Tight law · options, vol, stops</span>
+      <h2>Everything in vol scales as √time</h2>
+      <p>Variance adds linearly across independent periods, so volatility, an ATM straddle, and your Sharpe annualization all scale as <span class="mono">√T</span>. This is the exact sibling of the metabolic ¾ law — a sublinear power that our linear intuition gets wrong every time.</p>
+    </div>
+    <div class="card lab">
+      <div class="viz">
+        <canvas id="timePlot" width="380" height="300" aria-label="Volatility scaling with square root of time"></canvas>
+      </div>
+      <div class="panel">
+        <div>
+          <label class="ctl">1-day move / vol you're pricing from</label>
+          <input type="range" id="tVol" min="0.5" max="4" step="0.1" value="1.0">
+          <div class="val"><span id="tVolV">1.0</span>% per day</div>
+        </div>
+        <div class="sheetwrap">
+          <table class="sheet"><tbody id="timeRows"></tbody></table>
+        </div>
+        <div class="story" id="timeStory"></div>
+        <div class="action"><div class="h">Desk action</div><p>A 4-month straddle is worth <span class="mono">2×</span> a 1-month, not 4×. Quote and compare optionality per <span class="mono">√T</span>; size stops and targets in <span class="mono">σ·√(holding days)</span>, never in linear days.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HURST ===== -->
+<section id="hurst">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Tight law · which strategy the regime rewards</span>
+      <h2>The Hurst exponent picks your game</h2>
+      <p>The √T rule assumes a random walk (<span class="mono">H = 0.5</span>). Real paths deviate: range scales as <span class="mono">Tᴴ</span>. Below ½ the series mean-reverts (fade extremes); above ½ it trends (ride momentum). The essay's punchline — <em>0.5 vs 0.6 is a different world</em> — is literally your strategy selection.</p>
+    </div>
+    <div class="card lab">
+      <div class="viz">
+        <canvas id="hurstPlot" width="380" height="300" aria-label="Range scaling under different Hurst exponents"></canvas>
+      </div>
+      <div class="panel">
+        <div>
+          <label class="ctl">Hurst exponent (H)</label>
+          <input type="range" id="hVal" min="0.30" max="0.70" step="0.01" value="0.50">
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <span class="bigval" id="hValV">0.50</span>
+            <span class="val" id="hRegime" style="font-family:var(--sans);font-weight:700"></span>
+          </div>
+        </div>
+        <div class="presetrow" id="hPresets"></div>
+        <div class="story" id="hStory"></div>
+        <div class="disc" style="margin-top:0">In practice H sits near 0.5, drifts with regime, and is noisy to estimate on short samples — treat it as a lean, not a signal on its own. Same caution West gives every free-floating exponent.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TAILS ===== -->
+<section id="tails">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Tight law · the one that saves the fund</span>
+      <h2>Fat tails &amp; the coastline of your own P&amp;L</h2>
+      <p>Returns are power-law, not Gaussian — <span class="mono">P(|r|&gt;x) ∝ x⁻ᵅ</span>, with equity α≈3. The Gaussian assumption that underwrites most risk systems dramatically underprices the tail. And the "coastline paradox" bites twice: the finer you sample the path, the more length (turnover, cost, noise) you measure.</p>
+    </div>
+    <div class="card lab">
+      <div class="viz">
+        <canvas id="tailPlot" width="380" height="300" aria-label="Gaussian versus power-law tail probability"></canvas>
+      </div>
+      <div class="panel">
+        <div>
+          <label class="ctl">Shock size (daily σ-multiple)</label>
+          <input type="range" id="tailK" min="2" max="7" step="0.5" value="4">
+          <div class="val"><span id="tailKV">4.0</span>σ move</div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="b" id="tailG">—</div><div class="l">Gaussian: expect once per…</div></div>
+          <div class="kpi"><div class="b" id="tailP" style="color:var(--loss)">—</div><div class="l">Power-law (α≈3): once per…</div></div>
+        </div>
+        <div class="story" id="tailStory"></div>
+        <div class="action"><div class="h">Desk action</div><p>Size for the power-law tail, not the bell curve: cap single-name risk, own convex hedges that pay in the tail, and fractional-Kelly your sizing. On the coastline point — more screens ≠ more edge; finer sampling mostly buys you turnover and cost.</p></div>
+      </div>
+    </div>
+    <div class="two" style="margin-top:18px">
+      <div class="prose card pad">
+        <span class="eyebrow">Prediction without mechanism</span>
+        <h3 style="font-size:16px;margin:6px 0 10px">Mandelbrot's markets</h3>
+        <p style="font-size:14px">Cotton-futures charts look statistically the same at an hour or five years — self-similar, quantified by an exponent, predictive only in a coarse average sense. Mandelbrot measured the crinkliness and never cared why. "You wanna make money or you wanna be right?"</p>
+      </div>
+      <div class="prose card pad">
+        <span class="eyebrow">The trap it warns against</span>
+        <h3 style="font-size:16px;margin:6px 0 10px">Smooth models, jagged reality</h3>
+        <p style="font-size:14px">A Gaussian VaR calls a yearly event a once-a-century one. The whole point of West's opening: scaling intuition is what protects you from a plausible-sounding narrative that's ignorant of how reality actually scales.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PARETO ===== -->
+<section id="pareto">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Tight law · sizing &amp; attention</span>
+      <h2>A few trades make the year — Zipf your own book</h2>
+      <p>Just as word frequency and city sizes follow <span class="mono">rank⁻¹</span>, your P&L is radically concentrated: the top handful of positions carries most of the return. That has two hard consequences — don't clip your winners early (you're truncating the tail that pays you), and watch that the same concentration is also your risk.</p>
+    </div>
+    <div class="card lab">
+      <div class="viz">
+        <canvas id="paretoPlot" width="380" height="300" aria-label="Cumulative P&L contribution by trade rank"></canvas>
+      </div>
+      <div class="panel">
+        <div>
+          <label class="ctl">Concentration of your P&amp;L (Pareto steepness)</label>
+          <input type="range" id="pAlpha" min="0.6" max="2.0" step="0.05" value="1.0">
+          <div class="val">exponent ≈ <span id="pAlphaV">1.00</span></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="b" id="pTop20">—</div><div class="l">of P&L from your top 20% of trades</div></div>
+          <div class="kpi"><div class="b" id="pTop5">—</div><div class="l">of P&L from your top 5%</div></div>
+        </div>
+        <div class="story" id="pStory"></div>
+        <div class="action"><div class="h">Desk action</div><p>Let winners breathe and add to conviction — the exponent says the right tail is where the year is. Allocate <em>research time</em> the same way: a power law of effort, not an even spread across the watchlist.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CAPACITY ===== -->
+<section id="capacity">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Structural lens · the Kleiber's law of funds</span>
+      <h2>Why alpha growth stops</h2>
+      <p>In biology, growth halts because maintenance (cells) scales faster than supply (capillaries scale as size<sup>¾</sup>). In a fund, the same shape: gross edge per dollar is roughly flat, but impact cost per dollar rises with size (that <span class="mono">√</span>-law again). Net alpha climbs, peaks, and rolls over. Every strategy has a maximum size — and it's smaller than you'd like.</p>
+      <p class="tie"><b>Scale link:</b> "the increase in supply units cannot keep up with the demands from the increase in customers" (p. 166) — swap capillaries/cells for liquidity/AUM.</p>
+    </div>
+    <div class="card lab">
+      <div class="viz">
+        <canvas id="capPlot" width="380" height="300" aria-label="Net alpha versus assets under management"></canvas>
+      </div>
+      <div class="panel">
+        <div>
+          <label class="ctl">Current AUM (relative to your liquidity budget)</label>
+          <input type="range" id="capAum" min="5" max="100" step="1" value="30">
+          <div class="val"><span id="capAumV">30</span> units</div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="b" id="capNet">—</div><div class="l">net alpha at this size</div></div>
+          <div class="kpi"><div class="b" id="capOpt" style="color:var(--accent-ink)">—</div><div class="l">capacity: size that maximizes total alpha $</div></div>
+        </div>
+        <div class="story" id="capStory"></div>
+        <div class="action"><div class="h">Desk action</div><p>Past the peak, taking more capital <em>lowers</em> total dollars earned. The organism-like move is to cap the strategy, return capital, or diversify into a second uncorrelated edge — the way a city keeps living by adding new industries.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MORTALITY & RESILIENCE ===== -->
+<section id="resilience">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Structural lens · survive to compound</span>
+      <h2>Mortality, and why a smooth curve is a warning sign</h2>
+      <p>Companies and strategies are organisms: they mature, stagnate and die — half of US public companies vanish within a decade (p. 33). And West's heart-rate finding flips a comforting intuition: a <em>healthy</em> heart is spiky (high fractal dimension); a dangerously sick one goes smooth. An equity curve that's too smooth is usually hiding a short-vol tail, not proving skill.</p>
+    </div>
+    <div class="card lab">
+      <div class="viz">
+        <canvas id="curvePlot" width="380" height="300" aria-label="Two equity curves: smooth-but-fragile versus variable-but-robust"></canvas>
+      </div>
+      <div class="panel">
+        <div>
+          <label class="ctl">How much hidden short-vol are you selling for smoothness?</label>
+          <input type="range" id="fragile" min="0" max="100" step="1" value="55">
+          <div class="val" id="fragileV">balanced</div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="b" id="curveSharpe">—</div><div class="l">"looks-like" Sharpe (calm times)</div></div>
+          <div class="kpi"><div class="b" id="curveDD" style="color:var(--loss)">—</div><div class="l">tail drawdown when it breaks</div></div>
+        </div>
+        <div class="story" id="curveStory"></div>
+        <div class="action"><div class="h">Desk action</div><p>Prize the capacity to fluctuate. Diversify edges, keep dry powder, and be suspicious of any book whose beauty comes from never having a red month — that's fractal-dimension≈1, the sick-heart signature. Base-rate your single-name longs against corporate mortality.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRODUCTIVITY ===== -->
+<section id="productivity">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Productivity · think faster, transfer across assets</span>
+      <h2>Dimensionless thinking &amp; orders of magnitude</h2>
+      <p>West's model ships predict real ships because a <em>dimensionless number</em> (Froude, Reynolds) transfers across scale. The desk version: strip units and compare setups by ratios that travel across assets and regimes — and reason in orders of magnitude to sanity-check any story in seconds.</p>
+    </div>
+    <div class="two">
+      <div class="prose">
+        <div class="card pad">
+          <span class="eyebrow">Trade in dimensionless units</span>
+          <h3 style="font-size:16px;margin:6px 0 10px">Ratios that transfer</h3>
+          <ul style="margin:0;padding-left:18px;font-size:14px;color:var(--ink-soft);line-height:1.6">
+            <li>Move sized in <span class="mono">σ</span> or ATR, not points — a 30bp move in bonds and a 3% move in a biotech can be the same 2σ event.</li>
+            <li>Order size in <span class="mono">%ADV</span>; edge in <span class="mono">multiples of cost</span>; carry in <span class="mono">vol-adjusted</span> terms.</li>
+            <li>Sharpe, Sortino, hit-rate×payoff — all unit-free, all comparable across your book.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="prose">
+        <div class="card pad">
+          <span class="eyebrow">The order-of-magnitude reflex</span>
+          <h3 style="font-size:16px;margin:6px 0 10px">Log-first sanity checks</h3>
+          <p style="font-size:14px;margin:0 0 10px">Before the model, ask "what order of magnitude should this be?" It kills bad narratives fast: a TAM that needs 3 orders of magnitude of adoption; a "10× the size, 10× the impact" claim (it's √, so ~3×); an annualized number someone scaled linearly from a day.</p>
+          <p style="font-size:14px;margin:0"><b style="font-family:var(--sans);color:var(--ink)">The rule:</b> <span class="k">orders of magnitude in Y = a × orders of magnitude in X</span>. Carry the exponent, not the anecdote.</p>
+        </div>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:18px">
+      <div class="q">"Simply developing the habit to wonder what mathematical principle governs how a phenomenon unfolds might protect you from plausible-sounding narratives that are ultimately ignorant of how reality works."</div>
+      <div class="src">Moontower, on Scale — the whole edge, in one sentence.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CHEAT SHEET ===== -->
+<section id="cheatsheet">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Reference</span><h2>The PM's scaling cheat-sheet</h2><p>Law → the number → what you actually do about it.</p></div>
+    <div class="card pad sheetwrap">
+      <table class="sheet">
+        <thead><tr><th>Law</th><th>Exponent</th><th>Desk action</th></tr></thead>
+        <tbody>
+          <tr><td class="law">Market impact</td><td><span class="e">cost ∝ √(Q/ADV)</span>, total ∝ Q^1.5</td><td class="act">Slice orders; cap participation; the last third is the bleed. Model it as a real P&L line.</td></tr>
+          <tr><td class="law">Vol / options vs time</td><td><span class="e">σ ∝ √T</span></td><td class="act">Compare optionality per √T; size stops &amp; targets in σ·√(days), not linear time.</td></tr>
+          <tr><td class="law">Hurst persistence</td><td><span class="e">range ∝ Tᴴ</span></td><td class="act">H&lt;½ fade, H&gt;½ ride. Match holding period and strategy family to the regime.</td></tr>
+          <tr><td class="law">Fat tails</td><td><span class="e">P(|r|&gt;x) ∝ x⁻³</span></td><td class="act">Size for the tail; own convex hedges; fractional Kelly; distrust Gaussian VaR.</td></tr>
+          <tr><td class="law">P&amp;L concentration</td><td><span class="e">rank⁻¹</span></td><td class="act">Let winners run; conviction-size; allocate research time as a power law.</td></tr>
+          <tr><td class="law">Capacity</td><td><span class="e">net α peaks then rolls</span></td><td class="act">Know your max size; cap or return capital; add a second uncorrelated edge.</td></tr>
+          <tr><td class="law">Mortality</td><td><span class="e">½ gone in 10y</span></td><td class="act">Base-rate single-name longs; assume alpha has a half-life; keep evolving.</td></tr>
+          <tr><td class="law">Resilience</td><td><span class="e">high fractal dim</span></td><td class="act">Prize variability &amp; diversity; a too-smooth curve is hidden short-vol.</td></tr>
+          <tr><td class="law">Crowding</td><td><span class="e">links ∝ N²/2</span></td><td class="act">Map who else owns the trade; correlations →1 in a deleveraging.</td></tr>
+          <tr><td class="law">Dimensionless</td><td><span class="e">unit-free ratios</span></td><td class="act">Compare setups in σ / %ADV / Sharpe so intuition transfers across assets.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SELF TEST ===== -->
+<section id="selftest">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Check yourself · try first, then reveal</span><h2>Five desk questions</h2></div>
+    <div class="quiz" id="quiz"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><strong style="color:var(--ink-soft)">Note.</strong> A companion to the <em>Scale</em> study dashboard, translating Geoffrey West's scaling laws into portfolio-management frameworks. The interactive figures are illustrative teaching models with reasonable default constants (e.g. the market-impact coefficient is order-1 and empirical; equity tail exponent α≈3; H≈½ in practice) — calibrate them to your own book and venue before trusting a number. This is an educational aid, not investment advice.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.documentElement, tIcon=document.getElementById('themeIcon'), tLabel=document.getElementById('themeLabel');
+  function isDark(){var s=root.getAttribute('data-theme'); if(s) return s==='dark'; return window.matchMedia('(prefers-color-scheme: dark)').matches;}
+  function syncToggle(){var d=isDark(); tIcon.textContent=d?'☾':'☀'; tLabel.textContent=d?'Dark':'Light';}
+  document.getElementById('themeToggle').addEventListener('click',function(){root.setAttribute('data-theme',isDark()?'light':'dark'); syncToggle(); drawAll();});
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){syncToggle(); drawAll();});
+  function css(v){return getComputedStyle(root).getPropertyValue(v).trim();}
+
+  function prep(cv, ratio){
+    var dpr=window.devicePixelRatio||1;
+    var w=cv.clientWidth||cv.width, h=w*(ratio||(300/380));
+    cv.width=w*dpr; cv.height=h*dpr; cv.style.height=h+'px';
+    var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx:ctx,w:w,h:h};
+  }
+  function axes(ctx,W,H,xlab,ylab){
+    var m={l:38,r:12,t:14,b:28};
+    var x0=m.l,x1=W-m.r,y0=H-m.b,y1=m.t;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle=css('--line'); ctx.lineWidth=1; ctx.globalAlpha=.55;
+    for(var i=0;i<=5;i++){var gx=x0+(x1-x0)*i/5, gy=y0-(y0-y1)*i/5;
+      ctx.beginPath();ctx.moveTo(gx,y0);ctx.lineTo(gx,y1);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x0,gy);ctx.lineTo(x1,gy);ctx.stroke();}
+    ctx.globalAlpha=1;
+    ctx.strokeStyle=css('--ink-mute'); ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x0,y0);ctx.lineTo(x1,y0);ctx.stroke();
+    ctx.fillStyle=css('--ink-mute'); ctx.font="10px "+css('--sans');
+    ctx.fillText(xlab, x1-ctx.measureText(xlab).width, y0+18);
+    ctx.save(); ctx.translate(x0-26,y1+4); ctx.rotate(-Math.PI/2); ctx.fillText(ylab,-ctx.measureText(ylab).width,0); ctx.restore();
+    return {x0:x0,x1:x1,y0:y0,y1:y1};
+  }
+
+  /* ===== IMPACT ===== */
+  var impSize=document.getElementById('impSize'),impVol=document.getElementById('impVol'),
+      impSizeV=document.getElementById('impSizeV'),impVolV=document.getElementById('impVolV'),
+      impBps=document.getElementById('impBps'),impTot=document.getElementById('impTot'),impStory=document.getElementById('impStory');
+  var IMP_C=1.0; // order-1 empirical coefficient
+  function impactBps(pctADV, volPct){ return IMP_C*volPct*100*Math.sqrt(pctADV/100); } // bps
+  function drawImpact(){
+    var cv=document.getElementById('impactPlot'); var d=prep(cv), ctx=d.ctx, W=d.w, H=d.h;
+    var A=axes(ctx,W,H,'order size · %ADV','total cost · %notional');
+    var vol=+impVol.value;
+    // total cost % of notional = impact(bps)/1e4 ... plotted vs size 0..50
+    var maxY=impactBps(50,vol)/100; // in %
+    ctx.strokeStyle=css('--accent'); ctx.lineWidth=2.6; ctx.beginPath();
+    for(var i=0;i<=200;i++){var s=i/200*50; var y=impactBps(s,vol)/100;
+      var px=A.x0+(A.x1-A.x0)*(s/50), py=A.y0-(A.y0-A.y1)*(y/maxY);
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.stroke();
+    // linear reference (what people wrongly assume)
+    ctx.strokeStyle=css('--ink-mute'); ctx.globalAlpha=.4; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(A.x0,A.y0); ctx.lineTo(A.x1,A.y0-(A.y0-A.y1)*(impactBps(50,vol)/100/maxY)); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha=1;
+    // marker
+    var s=+impSize.value, y=impactBps(s,vol)/100;
+    var mx=A.x0+(A.x1-A.x0)*(s/50), my=A.y0-(A.y0-A.y1)*(y/maxY);
+    ctx.fillStyle=css('--accent'); ctx.beginPath(); ctx.arc(mx,my,5,0,7); ctx.fill();
+    ctx.strokeStyle=css('--surface'); ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=css('--ink-mute'); ctx.font="9.5px "+css('--sans');
+    ctx.fillText('√-law', A.x1-40, A.y1+30); ctx.fillText('linear (wrong)', A.x1-78, A.y0-8);
+  }
+  function updImpact(){
+    var s=+impSize.value, vol=+impVol.value;
+    impSizeV.textContent=s; impVolV.textContent=vol.toFixed(1);
+    var bps=impactBps(s,vol);
+    impBps.textContent=Math.round(bps)+' bps';
+    impTot.textContent=(bps/100).toFixed(2)+'%';
+    var dbl=impactBps(Math.min(s*2,100),vol);
+    impStory.innerHTML="Doubling this order to <b>"+Math.min(s*2,100)+"% ADV</b> raises impact only <b>×"+(dbl/bps).toFixed(2)+"</b> per share — but total dollars paid rise <b>×"+((dbl/bps)*2).toFixed(2)+"</b>, because cost scales as <b>Q^1.5</b>. Sublinear impact, superlinear bill.";
+    drawImpact();
+  }
+  impSize.addEventListener('input',updImpact); impVol.addEventListener('input',updImpact);
+
+  /* ===== VOL & TIME ===== */
+  var tVol=document.getElementById('tVol'),tVolV=document.getElementById('tVolV'),
+      timeRows=document.getElementById('timeRows'),timeStory=document.getElementById('timeStory');
+  var HORIZONS=[['1 day',1],['1 week',5],['1 month',21],['1 quarter',63],['1 year',252]];
+  function drawTime(){
+    var cv=document.getElementById('timePlot'); var d=prep(cv), ctx=d.ctx, W=d.w, H=d.h;
+    var A=axes(ctx,W,H,'time · trading days','cumulative vol · %');
+    var vd=+tVol.value, maxT=252, maxY=vd*Math.sqrt(maxT);
+    ctx.strokeStyle=css('--sub'); ctx.lineWidth=2.6; ctx.beginPath();
+    for(var i=0;i<=200;i++){var t=i/200*maxT; var y=vd*Math.sqrt(t);
+      var px=A.x0+(A.x1-A.x0)*(t/maxT), py=A.y0-(A.y0-A.y1)*(y/maxY);
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.stroke();
+    ctx.strokeStyle=css('--ink-mute'); ctx.globalAlpha=.4; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(A.x0,A.y0); ctx.lineTo(A.x1,A.y1); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+    HORIZONS.forEach(function(h){var t=h[1],y=vd*Math.sqrt(t);
+      var px=A.x0+(A.x1-A.x0)*(t/maxT), py=A.y0-(A.y0-A.y1)*(y/maxY);
+      ctx.fillStyle=css('--sub'); ctx.beginPath(); ctx.arc(px,py,3.4,0,7); ctx.fill();});
+    ctx.fillStyle=css('--ink-mute'); ctx.font="9.5px "+css('--sans');
+    ctx.fillText('√T', A.x1-24, A.y1+34); ctx.fillText('linear', A.x1-42, A.y0-8);
+  }
+  function updTime(){
+    var vd=+tVol.value; tVolV.textContent=vd.toFixed(1);
+    var rows='';
+    HORIZONS.forEach(function(h){ var v=vd*Math.sqrt(h[1]);
+      rows+='<tr><td style="font-family:var(--sans);font-weight:600;padding:6px 10px 6px 0;border-bottom:1px solid var(--line)">'+h[0]+'</td>'
+        +'<td class="mono num" style="padding:6px 0;border-bottom:1px solid var(--line)">±'+v.toFixed(1)+'%</td>'
+        +'<td class="mono num" style="padding:6px 0 6px 14px;border-bottom:1px solid var(--line);color:var(--ink-mute)">×'+Math.sqrt(h[1]).toFixed(1)+'</td></tr>';
+    });
+    timeRows.innerHTML='<tr><td style="font-family:var(--sans);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-mute);padding-bottom:6px">Horizon</td><td style="font-family:var(--sans);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-mute);padding-bottom:6px">Vol / straddle</td><td style="font-family:var(--sans);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-mute);padding:0 0 6px 14px">×1d</td></tr>'+rows;
+    timeStory.innerHTML="A 1-year straddle is only <b>×"+Math.sqrt(252).toFixed(1)+"</b> the 1-day, not ×252. Stretch time 2 orders of magnitude and premium rises just 1 order — the √ exponent halving your intuition.";
+    drawTime();
+  }
+  tVol.addEventListener('input',updTime);
+
+  /* ===== HURST ===== */
+  var hVal=document.getElementById('hVal'),hValV=document.getElementById('hValV'),hRegime=document.getElementById('hRegime'),hStory=document.getElementById('hStory');
+  var hPresets=document.getElementById('hPresets');
+  [['0.35 mean-revert',0.35],['0.50 random walk',0.50],['0.60 trending',0.60]].forEach(function(p){
+    var b=document.createElement('button'); b.className='preset'; b.textContent=p[0];
+    b.addEventListener('click',function(){hVal.value=p[1]; updHurst();}); hPresets.appendChild(b);
+  });
+  function drawHurst(){
+    var cv=document.getElementById('hurstPlot'); var d=prep(cv), ctx=d.ctx, W=d.w, H=d.h;
+    var A=axes(ctx,W,H,'time · days (log)','range (log)');
+    var Hs=[[0.35,css('--sub')],[+hVal.value,css('--accent')],[0.65,css('--sup')]];
+    var maxLogT=Math.log(252);
+    Hs.forEach(function(hc){ var Hh=hc[0];
+      ctx.strokeStyle=hc[1]; ctx.lineWidth=(Math.abs(Hh-(+hVal.value))<1e-6)?2.8:1.6; ctx.globalAlpha=(Math.abs(Hh-(+hVal.value))<1e-6)?1:.5;
+      ctx.beginPath();
+      for(var i=0;i<=100;i++){var lt=i/100*maxLogT; var lr=Hh*lt;
+        var px=A.x0+(A.x1-A.x0)*(lt/maxLogT), py=A.y0-(A.y0-A.y1)*(lr/maxLogT);
+        i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+      ctx.stroke();
+    });
+    ctx.globalAlpha=1; ctx.fillStyle=css('--ink-mute'); ctx.font="9.5px "+css('--sans');
+    ctx.fillText('slope = H', A.x0+8, A.y1+12);
+  }
+  function updHurst(){
+    var Hh=+hVal.value; hValV.textContent=Hh.toFixed(2);
+    var reg,col,txt;
+    if(Hh<0.47){reg='mean-reverting'; col=css('--sub');
+      txt="Range grows <b>slower</b> than √T — moves tend to reverse. Over a year, range is only <b>×"+Math.pow(252,Hh).toFixed(0)+"</b> a day (vs ×16 for a random walk). This is fade / mean-reversion territory: sell strength, buy weakness, shorter holds.";}
+    else if(Hh>0.53){reg='trending'; col=css('--sup');
+      txt="Range grows <b>faster</b> than √T — moves persist. Over a year, range is <b>×"+Math.pow(252,Hh).toFixed(0)+"</b> a day (vs ×16 random walk). This is momentum territory: ride winners, wider stops, longer holds.";}
+    else{reg='random walk'; col=css('--lin');
+      txt="Right at <b>H = ½</b>: range scales as exactly √T (×"+Math.pow(252,Hh).toFixed(0)+" over a year). No path-based edge — your alpha has to come from elsewhere.";}
+    hRegime.textContent=reg; hRegime.style.color=col; hStory.innerHTML=txt;
+    drawHurst();
+  }
+  hVal.addEventListener('input',updHurst);
+
+  /* ===== FAT TAILS ===== */
+  var tailK=document.getElementById('tailK'),tailKV=document.getElementById('tailKV'),
+      tailG=document.getElementById('tailG'),tailP=document.getElementById('tailP'),tailStory=document.getElementById('tailStory');
+  function gaussTail(k){ // P(X>k) one-sided approx
+    var t=1/(1+0.2316419*k);
+    var pdf=Math.exp(-k*k/2)/Math.sqrt(2*Math.PI);
+    var p=pdf*(0.319381530*t-0.356563782*t*t+1.781477937*t*t*t-1.821255978*Math.pow(t,4)+1.330274429*Math.pow(t,5));
+    return p; // upper tail
+  }
+  function powTail(k){ var kref=2, pref=gaussTail(2), a=3; return pref*Math.pow(k/kref,-a); } // calibrated to cross Gaussian at 2σ
+  function per(years){ if(years<1) return Math.round(years*252)+' days'; if(years<2) return 'year'; if(years<1000) return Math.round(years)+' yrs'; return Math.round(years/1000)+'k yrs'; }
+  function drawTail(){
+    var cv=document.getElementById('tailPlot'); var d=prep(cv), ctx=d.ctx, W=d.w, H=d.h;
+    var A=axes(ctx,W,H,'shock · σ','log₁₀ prob (2-sided/day)');
+    var kmin=1,kmax=7, ymin=-8, ymax=0;
+    function P(px,plog){ var x=A.x0+(A.x1-A.x0)*((px-kmin)/(kmax-kmin)); var y=A.y0-(A.y0-A.y1)*((plog-ymin)/(ymax-ymin)); return [x,y]; }
+    // gaussian
+    ctx.strokeStyle=css('--ink-mute'); ctx.lineWidth=2; ctx.beginPath();
+    for(var i=0;i<=100;i++){var k=kmin+(kmax-kmin)*i/100; var pl=Math.log(2*gaussTail(k))/Math.LN10; pl=Math.max(pl,ymin);
+      var q=P(k,pl); i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}
+    ctx.stroke();
+    // power law
+    ctx.strokeStyle=css('--loss'); ctx.lineWidth=2.6; ctx.beginPath();
+    for(i=0;i<=100;i++){var k2=kmin+(kmax-kmin)*i/100; var pl2=Math.log(2*powTail(k2))/Math.LN10; pl2=Math.max(pl2,ymin);
+      var q2=P(k2,pl2); i?ctx.lineTo(q2[0],q2[1]):ctx.moveTo(q2[0],q2[1]);}
+    ctx.stroke();
+    var k=+tailK.value; var qm=P(k,Math.max(Math.log(2*powTail(k))/Math.LN10,ymin));
+    ctx.fillStyle=css('--loss'); ctx.beginPath(); ctx.arc(qm[0],qm[1],5,0,7); ctx.fill();
+    ctx.strokeStyle=css('--surface'); ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=css('--ink-mute'); ctx.font="9.5px "+css('--sans');
+    ctx.fillText('Gaussian', A.x0+8, A.y0-6);
+    ctx.fillStyle=css('--loss'); ctx.fillText('power-law (α≈3)', A.x1-92, A.y1+12);
+  }
+  function updTail(){
+    var k=+tailK.value; tailKV.textContent=k.toFixed(1);
+    var pg=2*gaussTail(k), pp=2*powTail(k);
+    var yg=1/(pg*252), yp=1/(pp*252);
+    tailG.textContent=per(yg); tailP.textContent=per(yp);
+    var ratio=pp/pg;
+    tailStory.innerHTML="A <b>"+k.toFixed(1)+"σ</b> day is <b>×"+(ratio>=10?Math.round(ratio):ratio.toFixed(1))+"</b> more likely under fat tails than under the bell curve. The Gaussian calls it a "+per(yg)+" event; reality delivers it roughly every "+per(yp)+". Your VaR is reading the wrong ruler.";
+    drawTail();
+  }
+  tailK.addEventListener('input',updTail);
+
+  /* ===== PARETO ===== */
+  var pAlpha=document.getElementById('pAlpha'),pAlphaV=document.getElementById('pAlphaV'),
+      pTop20=document.getElementById('pTop20'),pTop5=document.getElementById('pTop5'),pStory=document.getElementById('pStory');
+  function cumShare(frac, a){ // fraction of total P&L from top `frac` of trades, weights ∝ rank^-a
+    var N=500, tot=0, top=0, cutoff=Math.max(1,Math.round(frac*N));
+    for(var r=1;r<=N;r++){ var w=Math.pow(r,-a); tot+=w; if(r<=cutoff) top+=w; }
+    return top/tot;
+  }
+  function drawPareto(){
+    var cv=document.getElementById('paretoPlot'); var d=prep(cv), ctx=d.ctx, W=d.w, H=d.h;
+    var A=axes(ctx,W,H,'top % of trades','cumulative % of P&L');
+    var a=+pAlpha.value;
+    ctx.strokeStyle=css('--accent'); ctx.lineWidth=2.6; ctx.beginPath();
+    for(var i=0;i<=100;i++){var f=i/100; var s=cumShare(f,a);
+      var px=A.x0+(A.x1-A.x0)*f, py=A.y0-(A.y0-A.y1)*s;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.stroke();
+    ctx.strokeStyle=css('--ink-mute'); ctx.globalAlpha=.4; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(A.x0,A.y0); ctx.lineTo(A.x1,A.y1); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+    var f20=0.2, s20=cumShare(f20,a);
+    var px=A.x0+(A.x1-A.x0)*f20, py=A.y0-(A.y0-A.y1)*s20;
+    ctx.fillStyle=css('--accent'); ctx.beginPath(); ctx.arc(px,py,5,0,7); ctx.fill();
+    ctx.strokeStyle=css('--surface'); ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=css('--ink-mute'); ctx.font="9.5px "+css('--sans'); ctx.fillText('even (no concentration)', A.x1-118, A.y0-8);
+  }
+  function updPareto(){
+    var a=+pAlpha.value; pAlphaV.textContent=a.toFixed(2);
+    pTop20.textContent=Math.round(cumShare(0.2,a)*100)+'%';
+    pTop5.textContent=Math.round(cumShare(0.05,a)*100)+'%';
+    pStory.innerHTML="At this steepness, your top <b>20%</b> of trades drive <b>"+Math.round(cumShare(0.2,a)*100)+"%</b> of P&L and the top <b>5%</b> drive <b>"+Math.round(cumShare(0.05,a)*100)+"%</b>. Cut those winners early and you're amputating the tail that funds the year.";
+    drawPareto();
+  }
+  pAlpha.addEventListener('input',updPareto);
+
+  /* ===== CAPACITY ===== */
+  var capAum=document.getElementById('capAum'),capAumV=document.getElementById('capAumV'),
+      capNet=document.getElementById('capNet'),capOpt=document.getElementById('capOpt'),capStory=document.getElementById('capStory');
+  var A0=0.20, K=60; // gross alpha per unit; impact scale
+  function totalAlpha(aum){ return aum*(A0) - (0.20/Math.sqrt(K))*Math.pow(aum,1.5); } // A0*AUM - c*AUM^1.5
+  var CAP_PEAK=(function(){ var best=0,bx=0; for(var x=1;x<=100;x++){var v=totalAlpha(x); if(v>best){best=v;bx=x;}} return bx; })();
+  function drawCap(){
+    var cv=document.getElementById('capPlot'); var d=prep(cv), ctx=d.ctx, W=d.w, H=d.h;
+    var A=axes(ctx,W,H,'AUM · units','total alpha · $');
+    var maxY=totalAlpha(CAP_PEAK)*1.15;
+    ctx.strokeStyle=css('--accent'); ctx.lineWidth=2.6; ctx.beginPath();
+    for(var i=0;i<=100;i++){var x=i/100*100; var y=Math.max(totalAlpha(x),0);
+      var px=A.x0+(A.x1-A.x0)*(x/100), py=A.y0-(A.y0-A.y1)*(y/maxY);
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.stroke();
+    // peak marker
+    var pkx=A.x0+(A.x1-A.x0)*(CAP_PEAK/100), pky=A.y0-(A.y0-A.y1)*(totalAlpha(CAP_PEAK)/maxY);
+    ctx.strokeStyle=css('--ink-mute'); ctx.globalAlpha=.5; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(pkx,A.y0); ctx.lineTo(pkx,pky); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+    ctx.fillStyle=css('--ink-mute'); ctx.font="9.5px "+css('--sans'); ctx.fillText('capacity', pkx-20, pky-8);
+    // current
+    var cx=+capAum.value; var cxx=A.x0+(A.x1-A.x0)*(cx/100), cyy=A.y0-(A.y0-A.y1)*(Math.max(totalAlpha(cx),0)/maxY);
+    ctx.fillStyle=(cx>CAP_PEAK)?css('--loss'):css('--gain'); ctx.beginPath(); ctx.arc(cxx,cyy,5,0,7); ctx.fill();
+    ctx.strokeStyle=css('--surface'); ctx.lineWidth=2; ctx.stroke();
+  }
+  function updCap(){
+    var x=+capAum.value; capAumV.textContent=x;
+    var net=A0 - (0.20/Math.sqrt(K))*Math.sqrt(x); // net alpha per unit
+    capNet.textContent=(net*100).toFixed(1)+'%';
+    capOpt.textContent=CAP_PEAK+' units';
+    if(x>CAP_PEAK) capStory.innerHTML="You're <b>past capacity</b>. Adding capital here <b>lowers</b> total dollars earned — impact is eating the edge. Net alpha per unit has fallen to "+(net*100).toFixed(1)+"%. Return capital or find a second edge.";
+    else capStory.innerHTML="Still climbing: net alpha per unit is "+(net*100).toFixed(1)+"%. Total dollars keep rising until <b>"+CAP_PEAK+" units</b>, where impact cost (a √-law) overtakes the flat gross edge — the fund's Kleiber ceiling.";
+    drawCap();
+  }
+  capAum.addEventListener('input',updCap);
+
+  /* ===== RESILIENCE CURVES ===== */
+  var fragile=document.getElementById('fragile'),fragileV=document.getElementById('fragileV'),
+      curveSharpe=document.getElementById('curveSharpe'),curveDD=document.getElementById('curveDD'),curveStory=document.getElementById('curveStory');
+  function drawCurves(){
+    var cv=document.getElementById('curvePlot'); var d=prep(cv), ctx=d.ctx, W=d.w, H=d.h;
+    var A=axes(ctx,W,H,'time','equity');
+    var f=+fragile.value/100; // 0 robust ... 1 fragile
+    // fragile: smooth up then cliff. robust: choppy, steadier compounding.
+    var seed=13; function rnd(){seed=(seed*9301+49297)%233280; return seed/233280-0.5;}
+    var N=120, cliffAt=0.82;
+    // robust curve
+    var rob=[0]; for(var i=1;i<N;i++){ rob.push(rob[i-1]+0.6+rnd()*3.0); }
+    seed=13;
+    var fr=[0]; for(i=1;i<N;i++){ var up=0.95+rnd()*0.5; if(i/N>cliffAt){ up=-(f*22); } fr.push(fr[i-1]+up); }
+    var all=rob.concat(fr), mx=Math.max.apply(null,all), mn=Math.min.apply(null,all);
+    function plot(arr,color,w){ ctx.strokeStyle=color; ctx.lineWidth=w; ctx.beginPath();
+      for(var i=0;i<arr.length;i++){var px=A.x0+(A.x1-A.x0)*(i/(N-1)); var py=A.y0-(A.y0-A.y1)*((arr[i]-mn)/(mx-mn));
+        i?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.stroke(); }
+    plot(rob, css('--sub'), 1.8);
+    plot(fr, css('--loss'), 2.4);
+    ctx.fillStyle=css('--sub'); ctx.font="9.5px "+css('--sans'); ctx.fillText('robust / variable', A.x0+8, A.y1+12);
+    ctx.fillStyle=css('--loss'); ctx.fillText('smooth then cliff', A.x0+8, A.y1+26);
+    return {fr:fr};
+  }
+  function updCurves(){
+    var f=+fragile.value/100;
+    fragileV.textContent = f<0.2?'robust book':(f<0.5?'balanced':(f<0.8?'selling smoothness':'short-vol time bomb'));
+    var looksSharpe=(1.2+f*2.4).toFixed(1);
+    var dd=Math.round(6+f*70);
+    curveSharpe.textContent=looksSharpe;
+    curveDD.textContent='−'+dd+'%';
+    curveStory.innerHTML="The smoother, higher-Sharpe line is bought with hidden convexity: when it breaks, the drawdown is <b>−"+dd+"%</b>. A high-fractal-dimension (jagged) book looks worse in calm markets but survives — the healthy-heart signature. Smoothness ≈ fractal dim 1 ≈ sick heart.";
+    drawCurves();
+  }
+  fragile.addEventListener('input',updCurves);
+
+  /* ===== QUIZ ===== */
+  var QS=[
+    {d:'Warm-up',q:'You need to buy 20% of a name’s ADV instead of 10%. Roughly how much more does impact cost you per share — and how much more in total dollars?',
+     a:'Impact per share ≈ <b>×√2 ≈ 1.4</b> (the ½ law). But total cost = size × impact ≈ <b>×2.8</b> (Q^1.5). Sublinear impact, superlinear bill — the case for slicing.'},
+    {d:'Core',q:'A 1-month ATM straddle costs $4. Same vol, what’s the 9-month worth — and what mistake does the naive answer make?',
+     a:'≈ <b>$12</b> (×√9 = 3), not $36. Naive linear scaling forgets variance is linear in time, so premium scales as √T. Same sublinear logic as Kleiber’s ¾.'},
+    {d:'Core',q:'Your backtest shows a beautifully smooth equity curve with no red months. Using West’s heart-rate result, why should that worry you rather than reassure you?',
+     a:'A <b>healthy heart is spiky</b> (high fractal dimension); a dangerously sick one goes smooth. A too-smooth curve usually means you’re short a hidden tail — fractal dimension ≈ 1 = the sick-heart signature. Variability is resilience.'},
+    {d:'Core',q:'You’re asked to run 3× more capital in the same strategy. Framed as Kleiber’s law, what determines whether that’s a good idea?',
+     a:'Whether you’re below capacity. Gross edge per dollar is ~flat but impact cost per dollar rises as a √-law, so <b>net total alpha peaks then rolls over</b>. Past the peak, more AUM earns fewer dollars — like an organism whose supply can’t feed its cells.'},
+    {d:'Challenge',q:'Your risk system (Gaussian) flags a 5σ day as a “1-in-a-century” event. Why is that dangerous, and what do you do differently?',
+     a:'Returns are power-law (α≈3), so a 5σ day arrives far more often than Gaussian says — years, not centuries. Practically: <b>size for the tail</b>, hold convex hedges that pay in the shock, use fractional Kelly, and never let VaR be your only ruler.'}
+  ];
+  var quiz=document.getElementById('quiz');
+  QS.forEach(function(it,i){
+    var el=document.createElement('div'); el.className='qcard';
+    el.innerHTML='<div class="diff">'+it.d+'</div><p class="qq">'+it.q+'</p><button class="reveal-btn" type="button">I’ve tried — show me</button><div class="answer">'+it.a+'</div>';
+    var b=el.querySelector('.reveal-btn'), ans=el.querySelector('.answer');
+    b.addEventListener('click',function(){var o=ans.classList.toggle('show'); b.textContent=o?'Hide':'I’ve tried — show me';});
+    quiz.appendChild(el);
+  });
+
+  /* ===== boot ===== */
+  function drawAll(){ updImpact(); updTime(); updHurst(); updTail(); updPareto(); updCap(); updCurves(); }
+  syncToggle(); drawAll();
+  var rt; window.addEventListener('resize',function(){clearTimeout(rt); rt=setTimeout(drawAll,120);});
+})();
+</script>
